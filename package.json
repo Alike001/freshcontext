@@ -1,0 +1,35 @@
+{
+  "name": "freshcontext",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence-bound memory for coding agents, powered by HydraDB OSS.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@10.33.1",
+  "scripts": {
+    "build": "pnpm --recursive build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm security:scan",
+    "dev:server": "pnpm --filter @freshcontext/server dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "security:scan": "node scripts/check-secrets.mjs",
+    "start": "docker compose up --build --wait",
+    "stop": "docker compose down",
+    "test": "pnpm --recursive test",
+    "test:integration": "node scripts/test-integration.mjs",
+    "typecheck": "pnpm --recursive typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "eslint": "10.8.1",
+    "prettier": "3.9.6",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.10"
+  }
+}

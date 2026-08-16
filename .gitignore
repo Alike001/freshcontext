@@ -1,0 +1,37 @@
+# Private planning and session files
+/AGENTS.md
+/PROMPTS.md
+/architecture.md
+/research-intake.md
+/design.doc.md
+/PRD.md
+/handoff.md
+/log.md
+/.thoughts/
+
+# Secrets and local runtime state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+/.freshcontext/
+/hydradb-data/
+
+# JavaScript and TypeScript output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Test output
+playwright-report/
+test-results/
+blob-report/
+
+# Editor and operating system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
