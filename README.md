@@ -8,18 +8,19 @@ withholds the stale claim and shows the exact code path that explains why.
 
 ## Current build status
 
-The repository currently contains the reproducible runtime foundation, immutable graph persistence,
-the TypeScript repository indexer, local MCP memory surface, and committed-change impact engine. It
-starts the released HydraDB OSS image, generates a local bearer token outside Git, performs real
-graph writes and strong reads, and exposes a fail-closed health endpoint. The indexer reads a clean
-Git commit, resolves tracked files, imports, functions, methods, and calls with ts-morph, and
-persists the commit-scoped graph to HydraDB. Synchronization classifies changed and removed symbols,
-runs bounded reverse call traversals in HydraDB, persists the shortest proof for each affected
-memory, and withholds that memory from later agent context. A resumable review operation preserves
-the old claim, validates current evidence, links a replacement through `SUPERSEDES`, and activates
-only the reviewed version. The reproducible evaluation runs real committed TypeScript changes and
-compares graph traversal with a direct-file baseline. The web product remains a separate public
-issue.
+The repository contains the reproducible runtime foundation, immutable graph persistence, the
+TypeScript repository indexer, local MCP memory surface, committed-change impact engine, and a
+responsive four-route web product. It starts the released HydraDB OSS image, generates a local
+bearer token outside Git, performs real graph writes and strong reads, and exposes fail-closed
+health and setup read models. The indexer reads a clean Git commit, resolves tracked files, imports,
+functions, methods, and calls with ts-morph, and persists the commit-scoped graph to HydraDB.
+Synchronization classifies changed and removed symbols, runs bounded reverse call traversals in
+HydraDB, persists the shortest proof for each affected memory, and withholds that memory from later
+agent context. A resumable review operation preserves the old claim, validates current evidence,
+links a replacement through `SUPERSEDES`, and activates only the reviewed version. The reproducible
+evaluation runs real committed TypeScript changes and compares graph traversal with a direct-file
+baseline. The interface labels example data and reports unavailable or unconfigured states instead
+of inventing repository activity.
 
 ## Run it
 
@@ -29,9 +30,11 @@ Prerequisites: Docker Engine with Docker Compose v2.
 docker compose up --build --wait
 ```
 
-Then open <http://localhost:3000/api/health>. A ready response means FreshContext has completed a
-real authenticated write-read round trip through HydraDB. The generated credential stays in a Docker
-volume and is never returned by the API.
+Then open <http://localhost:3000>. The landing page, Proof Console, Evaluation, and Setup routes are
+served from the same production container. Setup reports the live HydraDB round trip and repository
+state. You can inspect the raw readiness response at <http://localhost:3000/api/health>. A ready
+response means FreshContext completed a real authenticated write-read round trip through HydraDB.
+The generated credential stays in a Docker volume and is never returned by the API.
 
 Stop the local stack with:
 
@@ -54,8 +57,17 @@ pnpm test:integration
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
 the immutable graph, real Git indexer, and MCP stdio contracts against the pinned engine, verifies
-retry and overwrite behavior, interrupts and resumes a real impact sync, stops HydraDB to prove that
-health fails closed, and removes only that isolated project's containers and volume.
+retry and overwrite behavior, checks the production web shell and setup read model, interrupts and
+resumes a real impact sync, stops HydraDB to prove that health fails closed, and removes only that
+isolated project's containers and volume.
+
+The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, live
+HydraDB state, honest repository-empty behavior, and the unavailable-service path:
+
+```bash
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
 
 ## Reproduce the evaluation
 
@@ -104,9 +116,9 @@ history.
 
 ## Why HydraDB matters
 
-HydraDB will store code structure, evidence-linked memories, commit chronology, and transitive
-impact paths. FreshContext's core result depends on graph traversal across those relationships.
-There is no fallback database or hardcoded success path.
+HydraDB stores code structure, evidence-linked memories, commit chronology, and transitive impact
+paths. FreshContext's core result depends on graph traversal across those relationships. There is no
+fallback database or hardcoded success path.
 
 The runtime is pinned to HydraDB `v0.1.1`, source revision
 `02a40025d2d57e97ab2754c8256219cdbfeab379`, using the multi-platform image digest:

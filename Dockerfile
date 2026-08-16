@@ -11,6 +11,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/mcp/package.json apps/mcp/package.json
 COPY apps/server/package.json apps/server/package.json
+COPY apps/web/package.json apps/web/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/evaluation/package.json packages/evaluation/package.json
 COPY packages/graph/package.json packages/graph/package.json
@@ -20,6 +21,7 @@ COPY packages/indexer/package.json packages/indexer/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY apps/server apps/server
+COPY apps/web apps/web
 COPY apps/mcp apps/mcp
 COPY packages/core packages/core
 COPY packages/evaluation packages/evaluation
@@ -30,6 +32,7 @@ COPY packages/indexer packages/indexer
 
 RUN pnpm build
 RUN pnpm --filter @freshcontext/server deploy --prod /prod/freshcontext
+RUN cp -R /app/apps/web/dist /prod/freshcontext/public
 RUN pnpm --filter @freshcontext/mcp deploy --prod /prod/mcp
 
 FROM node:24.14.1-alpine AS mcp-runtime

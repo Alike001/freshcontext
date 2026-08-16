@@ -19,6 +19,24 @@ try {
   assert(readyBody.hydra === 'connected', 'Expected HydraDB to be connected');
   assert(typeof readyBody.roundTrip?.queryId === 'string', 'Expected a real query id');
 
+  const setupResponse = await fetch(`http://127.0.0.1:${port}/api/setup`);
+  const setupBody = await setupResponse.json();
+  assert(setupResponse.status === 200, 'Expected the setup read model to be available');
+  assert(setupBody.hydra === 'connected', 'Expected setup to verify HydraDB');
+  assert(
+    setupBody.repository?.state === 'not_configured',
+    'Expected setup to report the real unconfigured repository state',
+  );
+
+  const productResponse = await fetch(`http://127.0.0.1:${port}/setup`);
+  const productHtml = await productResponse.text();
+  assert(productResponse.status === 200, 'Expected a direct product route to serve the SPA');
+  assert(productHtml.includes('<title>FreshContext</title>'), 'Expected the FreshContext product');
+  assert(
+    productResponse.headers.get('content-security-policy')?.includes("default-src 'self'"),
+    'Expected the product security policy',
+  );
+
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'graph-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'indexer-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'mcp-contract-test']);
@@ -30,7 +48,7 @@ try {
   assert(unavailableBody.hydra === 'unavailable', 'Expected HydraDB to fail closed');
 
   console.log(
-    'Integration proof passed: HydraDB health, graph, indexer, MCP memory, evaluation, and fail-closed behavior.',
+    'Integration proof passed: product shell, HydraDB health, graph, indexer, MCP memory, evaluation, and fail-closed behavior.',
   );
 } catch (error) {
   testFailed = true;

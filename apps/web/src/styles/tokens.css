@@ -1,0 +1,47 @@
+:root {
+  --orange-500: #ff571a;
+  --yellow-500: #f9c425;
+  --ink-950: #000000;
+  --ink-900: #0f1112;
+  --ink-700: #2f3131;
+  --gray-500: #757575;
+  --gray-400: #999999;
+  --gray-300: #c6c6c7;
+  --gray-200: #dadada;
+  --gray-100: #f0f1f1;
+  --paper-50: #f8f8f8;
+  --white: #ffffff;
+
+  --color-primary: var(--orange-500);
+  --color-primary-foreground: var(--ink-950);
+  --color-background: var(--paper-50);
+  --color-surface: var(--white);
+  --color-foreground: var(--ink-900);
+  --color-muted: var(--gray-500);
+  --color-border: var(--gray-200);
+  --color-border-strong: var(--gray-300);
+  --color-review: var(--yellow-500);
+  --color-evidence: var(--ink-900);
+  --color-focus: var(--orange-500);
+
+  --font-display: 'Inter Variable', Inter, Arial, sans-serif;
+  --font-technical: 'Fragment Mono', 'Courier New', monospace;
+  --font-code: 'JetBrains Mono Variable', 'Courier New', monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --page-gutter: clamp(1.25rem, 4vw, 4rem);
+  --content-max: 100rem;
+
+  --border-default: 1px solid var(--color-border);
+  --border-strong: 1px solid var(--color-border-strong);
+  --focus-ring: 3px solid var(--color-focus);
+  --motion-fast: 140ms;
+  --motion-path: 200ms;
+}

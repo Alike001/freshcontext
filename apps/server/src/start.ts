@@ -1,3 +1,8 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { MemoryService } from '@freshcontext/core';
+import { ImmutableGraphStore } from '@freshcontext/graph';
 import { HydraClient, HydraHealthProbe, loadHydraConfig, waitForHydra } from '@freshcontext/hydra';
 
 import { buildApp } from './app.js';
@@ -14,7 +19,17 @@ const startupTimeoutMs = positiveInteger(
 const hydra = new HydraClient(loadHydraConfig(environment));
 await waitForHydra(hydra, { timeoutMs: startupTimeoutMs });
 const healthProbe = await HydraHealthProbe.initialize(hydra);
-const app = buildApp({ healthGateway: healthProbe, logger: true });
+const staticRoot = resolve(import.meta.dirname, '../public');
+const app = buildApp({
+  healthGateway: healthProbe,
+  logger: true,
+  ...(existsSync(staticRoot) ? { staticRoot } : {}),
+  setup: {
+    repositoryId: environment['FRESHCONTEXT_REPOSITORY_ID'],
+    repositoryPath: environment['FRESHCONTEXT_REPOSITORY_PATH'],
+    statusGateway: new MemoryService({ graph: new ImmutableGraphStore(hydra), hydra }),
+  },
+});
 
 const stop = async (signal: string): Promise<void> => {
   app.log.info({ signal }, 'Stopping FreshContext');
