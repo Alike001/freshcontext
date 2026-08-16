@@ -15,7 +15,7 @@ import {
   upsertRelationshipQuery,
 } from './queries.js';
 
-interface StoredEntity {
+export interface StoredEntity {
   readonly id: number;
   readonly entityKey: string;
   readonly kind: string;
@@ -23,7 +23,7 @@ interface StoredEntity {
   readonly payload: string;
 }
 
-interface StoredRelationship {
+export interface StoredRelationship {
   readonly sourceId: number;
   readonly targetId: number;
   readonly id: number;

@@ -15,4 +15,9 @@ export type {
   RelationshipKind,
 } from './model.js';
 export { GraphCollisionError, ImmutableGraphStore } from './store.js';
-export type { HydraQueryGateway, PersistedGraphRecord } from './store.js';
+export type {
+  HydraQueryGateway,
+  PersistedGraphRecord,
+  StoredEntity,
+  StoredRelationship,
+} from './store.js';

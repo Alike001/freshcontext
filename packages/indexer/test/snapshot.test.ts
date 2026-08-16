@@ -62,6 +62,9 @@ describe('TypeScript repository snapshots', () => {
     expect(kinds).toContain('CALLS');
     expect(kinds).toContain('HAS_INDEX_RUN');
     expect(plan.completion).toHaveLength(2);
+    expect(plan.completion[0]?.target.payload).toContain(
+      `"committedAt":"${snapshot.commit.committedAt}"`,
+    );
   });
 
   it('bounds persisted diagnostic details while preserving the complete count', async () => {

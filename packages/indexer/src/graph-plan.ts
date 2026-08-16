@@ -128,6 +128,7 @@ function indexRunProperties(snapshot: RepositorySnapshot): JsonObject {
   return {
     repositoryId: snapshot.repositoryId,
     commitSha: snapshot.commit.sha,
+    committedAt: snapshot.commit.committedAt,
     state: 'complete',
     statistics: { ...snapshot.statistics },
     skippedFiles: skippedFiles.map((file) => ({

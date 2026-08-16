@@ -9,13 +9,13 @@ withholds the stale claim and shows the exact code path that explains why.
 ## Current build status
 
 The repository currently contains the reproducible runtime foundation, immutable graph persistence,
-and the TypeScript repository indexer. It starts the released HydraDB OSS image, generates a local
-bearer token outside Git, performs real graph writes and strong reads, and exposes a fail-closed
-health endpoint. The graph layer provides deterministic integer ids, canonical immutable payloads,
-collision guards, bounded composite keys, and duplicate-free retries. The indexer reads a clean Git
-commit, resolves tracked files, imports, functions, methods, and calls with ts-morph, and persists
-the commit-scoped graph to HydraDB. Agent tools, impact traversal, and the web product are tracked
-as separate public issues and aren't claimed as complete.
+the TypeScript repository indexer, and the local MCP memory surface. It starts the released HydraDB
+OSS image, generates a local bearer token outside Git, performs real graph writes and strong reads,
+and exposes a fail-closed health endpoint. The indexer reads a clean Git commit, resolves tracked
+files, imports, functions, methods, and calls with ts-morph, and persists the commit-scoped graph to
+HydraDB. The MCP server accepts only evidence that resolves to that graph, returns current memory,
+withholds unsafe memory, and distinguishes abstention from unavailable context. Impact traversal,
+human review, evaluation, and the web product remain tracked as separate public issues.
 
 ## Run it
 
@@ -49,9 +49,23 @@ pnpm test:integration
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
-the immutable graph and real Git indexer contracts against the pinned engine, verifies retry and
-overwrite behavior, stops HydraDB to prove that health fails closed, and removes only that isolated
-project's containers and volume.
+the immutable graph, real Git indexer, and MCP stdio contracts against the pinned engine, verifies
+retry and overwrite behavior, stops HydraDB to prove that health fails closed, and removes only that
+isolated project's containers and volume.
+
+## Agent tool contract
+
+The local stdio server publishes three bounded tools:
+
+- `freshcontext_remember` stores a claim only after every cited symbol resolves at the selected
+  indexed commit.
+- `freshcontext_recall` returns current claims for an exact symbol, reports withheld unsafe matches,
+  and explicitly abstains when no safe claim exists.
+- `freshcontext_status` reports the selected completed index and its real ingestion counts.
+
+The MCP process is packaged in the `mcp-runtime` Docker target. Its contract test spawns the real
+stdio process and exercises it against the pinned HydraDB container. There is no in-memory or second
+database fallback.
 
 ## Why HydraDB matters
 

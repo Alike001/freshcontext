@@ -1,0 +1,24 @@
+{
+  "name": "@freshcontext/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/start.js",
+    "test": "vitest run --exclude test/contract.test.ts",
+    "test:contract": "vitest run test/contract.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@freshcontext/core": "workspace:*",
+    "@freshcontext/graph": "workspace:*",
+    "@freshcontext/hydra": "workspace:*",
+    "@freshcontext/indexer": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  }
+}
