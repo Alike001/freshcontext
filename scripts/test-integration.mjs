@@ -22,6 +22,7 @@ try {
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'graph-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'indexer-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'mcp-contract-test']);
+  await compose(['--profile', 'test', 'run', '--build', '--rm', 'core-contract-test']);
 
   await compose(['stop', 'hydra']);
   const unavailableBody = await waitForUnavailable(port);

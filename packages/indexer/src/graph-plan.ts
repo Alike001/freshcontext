@@ -69,24 +69,7 @@ export function createRepositoryGraphPlan(snapshot: RepositorySnapshot): Reposit
       entityKeys.symbol(snapshot.repositoryId, symbol.path, symbol.qualifiedName),
       { path: symbol.path, qualifiedName: symbol.qualifiedName, symbolKind: symbol.kind },
     );
-    const revision = createImmutableEntity(
-      'SymbolRevision',
-      entityKeys.symbolRevision(
-        snapshot.repositoryId,
-        snapshot.commit.sha,
-        symbol.path,
-        symbol.qualifiedName,
-      ),
-      {
-        path: symbol.path,
-        qualifiedName: symbol.qualifiedName,
-        symbolKind: symbol.kind,
-        commitSha: snapshot.commit.sha,
-        sourceHash: symbol.sourceHash,
-        startLine: symbol.startLine,
-        endLine: symbol.endLine,
-      },
-    );
+    const revision = createSymbolRevisionEntity(snapshot.repositoryId, snapshot.commit.sha, symbol);
     symbolEntities.set(symbol.key, { stable, revision });
     content.push(
       createImmutableRelationship('DECLARES', file.revision, revision),
@@ -120,6 +103,26 @@ export function createRepositoryGraphPlan(snapshot: RepositorySnapshot): Reposit
     content: uniqueRelationships(content),
     completion: uniqueRelationships(completion),
   };
+}
+
+export function createSymbolRevisionEntity(
+  repositoryId: string,
+  commitSha: string,
+  symbol: RepositorySnapshot['symbols'][number],
+): ImmutableEntity {
+  return createImmutableEntity(
+    'SymbolRevision',
+    entityKeys.symbolRevision(repositoryId, commitSha, symbol.path, symbol.qualifiedName),
+    {
+      path: symbol.path,
+      qualifiedName: symbol.qualifiedName,
+      symbolKind: symbol.kind,
+      commitSha,
+      sourceHash: symbol.sourceHash,
+      startLine: symbol.startLine,
+      endLine: symbol.endLine,
+    },
+  );
 }
 
 function indexRunProperties(snapshot: RepositorySnapshot): JsonObject {

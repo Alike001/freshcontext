@@ -13,7 +13,7 @@ import {
 } from '@freshcontext/graph';
 import { HydraRequestError, type HydraQueryResponse } from '@freshcontext/hydra';
 
-import { MemoryDomainError } from './errors.js';
+import { ContextUnavailableError, MemoryDomainError } from './errors.js';
 import {
   immutableEntityFromStored,
   numberProperties,
@@ -22,8 +22,10 @@ import {
 } from './payload.js';
 import {
   INSPECT_MEMORY_STATE_QUERY,
+  INSPECT_REPOSITORY_SYNC_QUERY,
   LIST_INDEX_RUNS_QUERY,
   RECALL_MEMORIES_QUERY,
+  RESOLVE_STABLE_SYMBOL_QUERY,
   SET_MEMORY_STATE_QUERY,
 } from './queries.js';
 import {
@@ -132,8 +134,9 @@ export class MemoryService {
       validateRepositoryAndCommit(input.repositoryId, input.commitSha);
       await this.#requireCompletedIndex(input.repositoryId, input.commitSha);
       const evidence = await this.#requireEvidence(input.repositoryId, input.commitSha, context);
+      const symbolId = await this.#requireStableSymbolId(evidence.id);
       const response = await this.#hydra.query(RECALL_MEMORIES_QUERY, {
-        parameters: { evidenceId: evidence.id },
+        parameters: { symbolId },
         consistency: 'strong',
       });
       const active: MemoryRecord[] = [];
@@ -166,9 +169,8 @@ export class MemoryService {
       };
       return result;
     } catch (error) {
-      if (error instanceof HydraRequestError) {
-        return contextUnavailable();
-      }
+      if (error instanceof HydraRequestError) return contextUnavailable();
+      if (error instanceof ContextUnavailableError) return contextUnavailable(error.message);
       throw error;
     }
   }
@@ -176,8 +178,18 @@ export class MemoryService {
   public async status(input: StatusInput): Promise<SafeStatusResult> {
     try {
       validateNonEmpty('repositoryId', input.repositoryId, 200);
+      const repository = await this.#repositorySyncState(input.repositoryId);
+      if (repository.syncState === 'syncing') throw new ContextUnavailableError();
       const runs = await this.#listIndexRuns(input.repositoryId);
-      const selected = runs[0];
+      const selected = repository.selectedCommit
+        ? runs.find((run) => run.commitSha === repository.selectedCommit)
+        : runs[0];
+      if (repository.selectedCommit && !selected) {
+        throw new MemoryDomainError(
+          'CORRUPT_GRAPH',
+          `Selected commit ${repository.selectedCommit} has no completed index run`,
+        );
+      }
       const result: RepositoryStatusResult = {
         status: 'ready',
         repositoryId: input.repositoryId,
@@ -187,9 +199,8 @@ export class MemoryService {
       };
       return result;
     } catch (error) {
-      if (error instanceof HydraRequestError) {
-        return contextUnavailable();
-      }
+      if (error instanceof HydraRequestError) return contextUnavailable();
+      if (error instanceof ContextUnavailableError) return contextUnavailable(error.message);
       throw error;
     }
   }
@@ -200,7 +211,12 @@ export class MemoryService {
 
   async #requireCompletedIndex(repositoryId: string, commitSha: string): Promise<StoredEntity> {
     validateRepositoryAndCommit(repositoryId, commitSha);
-    const selected = (await this.#listIndexRuns(repositoryId))[0];
+    const repository = await this.#repositorySyncState(repositoryId);
+    if (repository.syncState === 'syncing') throw new ContextUnavailableError();
+    const runs = await this.#listIndexRuns(repositoryId);
+    const selected = repository.selectedCommit
+      ? runs.find((run) => run.commitSha === repository.selectedCommit)
+      : runs[0];
     if (!selected) {
       throw new MemoryDomainError(
         'INDEX_NOT_FOUND',
@@ -274,6 +290,20 @@ export class MemoryService {
     }
   }
 
+  async #requireStableSymbolId(evidenceId: number): Promise<number> {
+    const response = await this.#hydra.query(RESOLVE_STABLE_SYMBOL_QUERY, {
+      parameters: { evidenceId },
+      consistency: 'strong',
+    });
+    if (response.rows.length !== 1) {
+      throw new MemoryDomainError(
+        'CORRUPT_GRAPH',
+        `Evidence ${evidenceId} has ${response.rows.length} stable symbol identities`,
+      );
+    }
+    return requiredNumberCell(response, 0, 'symbolId');
+  }
+
   async #inspectMemoryState(memoryId: number): Promise<MemoryState | undefined> {
     const response = await this.#hydra.query(INSPECT_MEMORY_STATE_QUERY, {
       parameters: { memoryId },
@@ -302,6 +332,27 @@ export class MemoryService {
         Date.parse(right.committedAt) - Date.parse(left.committedAt) ||
         right.commitSha.localeCompare(left.commitSha, 'en'),
     );
+  }
+
+  async #repositorySyncState(repositoryId: string): Promise<RepositorySyncState> {
+    const repositoryVertexId = deterministicIntegerId(
+      'entity',
+      entityKeys.repository(repositoryId),
+    );
+    const response = await this.#hydra.query(INSPECT_REPOSITORY_SYNC_QUERY, {
+      parameters: { repositoryId: repositoryVertexId },
+      consistency: 'strong',
+    });
+    if (response.rows.length === 0) return { selectedCommit: null, syncState: 'ready' };
+    if (response.rows.length !== 1) {
+      throw new MemoryDomainError('CORRUPT_GRAPH', `Repository ${repositoryId} is duplicated`);
+    }
+    const selectedCommit = optionalStringCell(response, 0, 'selectedCommit');
+    const syncState = optionalStringCell(response, 0, 'syncState') ?? 'ready';
+    if (syncState !== 'ready' && syncState !== 'syncing') {
+      throw new MemoryDomainError('CORRUPT_GRAPH', `Repository ${repositoryId} state is invalid`);
+    }
+    return { selectedCommit: selectedCommit ?? null, syncState };
   }
 }
 
@@ -473,6 +524,11 @@ interface IndexRunRecord {
   readonly statistics: Record<string, number>;
 }
 
+interface RepositorySyncState {
+  readonly selectedCommit: string | null;
+  readonly syncState: 'ready' | 'syncing';
+}
+
 function requiredEntityKindCell<T extends StoredEntity['kind']>(
   response: HydraQueryResponse,
   row: number,
@@ -508,6 +564,19 @@ function requiredNumberCell(response: HydraQueryResponse, row: number, column: s
   return value.value;
 }
 
+function optionalStringCell(
+  response: HydraQueryResponse,
+  row: number,
+  column: string,
+): string | undefined {
+  const value = requiredCell(response, row, column);
+  if (value.type === 'null') return undefined;
+  if (value.type !== 'string') {
+    throw new MemoryDomainError('CORRUPT_GRAPH', `HydraDB column ${column} is not a string`);
+  }
+  return value.value;
+}
+
 function requiredCell(response: HydraQueryResponse, row: number, column: string) {
   const index = response.columns.indexOf(column);
   const value = index >= 0 ? response.rows[row]?.[index] : undefined;
@@ -517,9 +586,11 @@ function requiredCell(response: HydraQueryResponse, row: number, column: string)
   return value;
 }
 
-function contextUnavailable(): ContextUnavailableResult {
+function contextUnavailable(
+  message = 'HydraDB is unavailable, so FreshContext cannot verify memory safety',
+): ContextUnavailableResult {
   return {
     status: 'context_unavailable',
-    message: 'HydraDB is unavailable, so FreshContext cannot verify memory safety',
+    message,
   };
 }

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@freshcontext/graph": "workspace:*",
-    "@freshcontext/hydra": "workspace:*"
+    "@freshcontext/hydra": "workspace:*",
+    "@freshcontext/indexer": "workspace:*"
   }
 }

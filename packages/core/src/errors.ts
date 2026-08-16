@@ -4,6 +4,7 @@ export type MemoryErrorCode =
   | 'STALE_COMMIT'
   | 'EVIDENCE_NOT_FOUND'
   | 'MEMORY_NOT_RETRYABLE'
+  | 'SYNC_CONFLICT'
   | 'CORRUPT_GRAPH';
 
 export class MemoryDomainError extends Error {
@@ -13,5 +14,12 @@ export class MemoryDomainError extends Error {
     super(message);
     this.name = 'MemoryDomainError';
     this.code = code;
+  }
+}
+
+export class ContextUnavailableError extends Error {
+  public constructor(message = 'FreshContext is synchronizing repository context') {
+    super(message);
+    this.name = 'ContextUnavailableError';
   }
 }

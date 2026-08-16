@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { MemoryDomainError, type MemoryService } from '@freshcontext/core';
+import { ContextUnavailableError, MemoryDomainError, type MemoryService } from '@freshcontext/core';
 import { HydraRequestError } from '@freshcontext/hydra';
 
 import {
@@ -93,10 +93,13 @@ function toolError(error: unknown) {
   const detail =
     error instanceof MemoryDomainError
       ? { code: error.code, message: error.message }
-      : error instanceof HydraRequestError
+      : error instanceof HydraRequestError || error instanceof ContextUnavailableError
         ? {
             code: 'CONTEXT_UNAVAILABLE',
-            message: 'HydraDB is unavailable, so FreshContext cannot verify memory safety',
+            message:
+              error instanceof ContextUnavailableError
+                ? error.message
+                : 'HydraDB is unavailable, so FreshContext cannot verify memory safety',
           }
         : { code: 'INTERNAL_ERROR', message: 'FreshContext could not complete the operation' };
   return {

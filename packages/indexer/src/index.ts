@@ -1,3 +1,4 @@
+export * from './change.js';
 export * from './errors.js';
 export * from './git.js';
 export * from './graph-plan.js';

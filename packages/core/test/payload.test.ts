@@ -4,7 +4,7 @@ import { createImmutableEntity, type StoredEntity } from '@freshcontext/graph';
 
 import { MemoryDomainError } from '../src/errors.js';
 import { parseEntityPayload } from '../src/payload.js';
-import { LIST_INDEX_RUNS_QUERY, RECALL_MEMORIES_QUERY } from '../src/queries.js';
+import { LIST_INDEX_RUNS_QUERY, RECALL_MEMORIES_QUERY, impactQuery } from '../src/queries.js';
 
 describe('immutable domain payloads', () => {
   it('accepts a matching canonical payload', () => {
@@ -24,5 +24,13 @@ describe('immutable domain payloads', () => {
       expect(query).toContain('.entity_kind AS entityKind');
       expect(query).toContain('.payload_hash AS payloadHash');
     }
+  });
+
+  it('uses four explicit bounded impact query shapes', () => {
+    const queries = [0, 1, 2, 3].map(impactQuery);
+    expect(queries).toHaveLength(4);
+    expect(queries.every((query) => !query.includes('*'))).toBe(true);
+    expect(queries[3]?.match(/\[:CALLS\]/gu)).toHaveLength(3);
+    expect(() => impactQuery(4)).toThrow(/zero to three/u);
   });
 });
