@@ -42,6 +42,12 @@ importers:
         specifier: 5.12.0
         version: 5.12.0
 
+  packages/graph:
+    dependencies:
+      '@freshcontext/hydra':
+        specifier: workspace:*
+        version: link:../hydra
+
   packages/hydra: {}
 
 packages:

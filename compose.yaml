@@ -71,5 +71,29 @@ services:
       retries: 60
       start_period: 5s
 
+  graph-contract-test:
+    profiles: ['test']
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    depends_on:
+      hydra:
+        condition: service_started
+      hydra-init:
+        condition: service_completed_successfully
+    command: ['pnpm', '--filter', '@freshcontext/graph', 'test:contract']
+    environment:
+      HYDRA_QUERY_BASE_URL: http://hydra:8443
+      HYDRA_ADMIN_BASE_URL: http://hydra:9090
+      HYDRA_GRAPH_ID: freshcontext
+      HYDRA_GRAPH_NAMESPACE: freshcontext
+      HYDRA_CELL_ID: cell-0
+      HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
+      HYDRA_REQUEST_TIMEOUT_MS: '5000'
+      HYDRA_CONTRACT_TEST: '1'
+    volumes:
+      - hydra-data:/run/hydra:ro
+
 volumes:
   hydra-data:

@@ -8,10 +8,13 @@ withholds the stale claim and shows the exact code path that explains why.
 
 ## Current build status
 
-The repository currently contains the reproducible runtime foundation. It starts the released
-HydraDB OSS image, generates a local bearer token outside Git, performs a real graph write and
-strong read, and exposes a fail-closed health endpoint. Repository indexing, agent tools, impact
-proofs, and the web product are tracked as separate public issues and aren't claimed as complete.
+The repository currently contains the reproducible runtime foundation and immutable graph
+persistence layer. It starts the released HydraDB OSS image, generates a local bearer token outside
+Git, performs real graph writes and strong reads, and exposes a fail-closed health endpoint. The
+graph layer provides deterministic integer ids, canonical immutable payloads, collision guards,
+bounded composite keys, and duplicate-free retries for the complete V1 entity and relationship
+catalog. Repository indexing, agent tools, impact traversal, and the web product are tracked as
+separate public issues and aren't claimed as complete.
 
 ## Run it
 
@@ -44,9 +47,10 @@ pnpm build
 pnpm test:integration
 ```
 
-The integration test creates an isolated Compose project, proves the real HydraDB round trip, stops
-HydraDB to verify that health fails closed, and removes only that isolated project's containers and
-volume.
+The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
+the immutable graph contract against the pinned engine, verifies retry and overwrite behavior,
+stops HydraDB to prove that health fails closed, and removes only that isolated project's containers
+and volume.
 
 ## Why HydraDB matters
 

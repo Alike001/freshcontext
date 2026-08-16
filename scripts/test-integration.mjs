@@ -19,6 +19,8 @@ try {
   assert(readyBody.hydra === 'connected', 'Expected HydraDB to be connected');
   assert(typeof readyBody.roundTrip?.queryId === 'string', 'Expected a real query id');
 
+  await compose(['--profile', 'test', 'run', '--build', '--rm', 'graph-contract-test']);
+
   await compose(['stop', 'hydra']);
   const unavailableBody = await waitForUnavailable(port);
   assert(unavailableBody.hydra === 'unavailable', 'Expected HydraDB to fail closed');
