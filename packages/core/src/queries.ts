@@ -104,3 +104,14 @@ RETURN impact.id AS impactId,
        impact.payload_hash AS payloadHash,
        impact.payload AS payload
 ORDER BY impact.id`;
+
+export const SET_REVIEW_STATE_QUERY = `MATCH (review:FreshContextEntity {id: $reviewId})
+SET review.state = $state`;
+
+export const INSPECT_REVIEW_STATE_QUERY = `MATCH (review {id: $reviewId})
+RETURN review.id AS reviewId,
+       review.state AS state`;
+
+export const INSPECT_SUPERSESSION_QUERY = `MATCH (replacement:FreshContextEntity)-[:SUPERSEDES]->(original:FreshContextEntity {id: $originalId})
+RETURN replacement.id AS replacementId,
+       original.id AS originalId`;

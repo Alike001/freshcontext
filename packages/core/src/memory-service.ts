@@ -53,6 +53,11 @@ export interface MemoryServiceOptions {
   readonly clock?: () => Date;
 }
 
+export interface MemoryHandle {
+  readonly entity: ImmutableEntity;
+  readonly record: MemoryRecord;
+}
+
 export class MemoryService {
   readonly #graph: ImmutableGraphStore;
   readonly #hydra: HydraQueryGateway;
@@ -65,6 +70,25 @@ export class MemoryService {
   }
 
   public async remember(input: RememberInput): Promise<MemoryRecord> {
+    const prepared = await this.prepareMemory(input);
+    const { entity: memory, record } = prepared;
+    const event = createImmutableEntity(
+      'MemoryEvent',
+      entityKeys.memoryEvent(record.repositoryId, record.memoryId, 'created'),
+      {
+        memoryId: record.memoryId,
+        eventType: 'created',
+        state: 'current',
+        commitSha: record.sourceCommit,
+        occurredAt: record.createdAt,
+      },
+    );
+    await this.#graph.writeRelationship(createImmutableRelationship('HAS_EVENT', memory, event));
+    await this.#setMemoryState(memory.id, 'current');
+    return { ...record, state: 'current' };
+  }
+
+  public async prepareMemory(input: RememberInput): Promise<MemoryHandle> {
     const normalized = normalizeRememberInput(input);
     await this.#requireCompletedIndex(normalized.repositoryId, normalized.commitSha);
     const evidence = await Promise.all(
@@ -112,20 +136,24 @@ export class MemoryService {
         createImmutableRelationship('SUPPORTED_BY', memory, target),
       );
     }
-    const event = createImmutableEntity(
-      'MemoryEvent',
-      entityKeys.memoryEvent(normalized.repositoryId, memoryId, 'created'),
-      {
-        memoryId,
-        eventType: 'created',
-        state: 'current',
-        commitSha: normalized.commitSha,
-        occurredAt: createdAt,
-      },
-    );
-    await this.#graph.writeRelationship(createImmutableRelationship('HAS_EVENT', memory, event));
-    await this.#setMemoryState(memory.id, 'current');
-    return memoryRecord(memory, 'current');
+    return { entity: memory, record: memoryRecord(memory, existingState ?? 'pending') };
+  }
+
+  public async getMemory(
+    repositoryId: string,
+    memoryId: string,
+  ): Promise<MemoryHandle | undefined> {
+    validateNonEmpty('repositoryId', repositoryId, 200);
+    validateNonEmpty('memoryId', memoryId, 200);
+    const key = entityKeys.memory(repositoryId, memoryId);
+    const stored = await this.#graph.inspectEntity(deterministicIntegerId('entity', key));
+    if (!stored) return undefined;
+    if (stored.kind !== 'Memory') {
+      throw new MemoryDomainError('CORRUPT_GRAPH', `Entity ${key} is not a memory`);
+    }
+    const state = (await this.#inspectMemoryState(stored.id)) ?? 'pending';
+    const entity = immutableEntityFromStored(stored);
+    return { entity, record: memoryRecord(entity, state) };
   }
 
   public async recall(input: RecallInput): Promise<SafeRecallResult> {

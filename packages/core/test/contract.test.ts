@@ -12,7 +12,12 @@ import { HydraClient, loadHydraConfig, type HydraQueryResponse } from '@freshcon
 import { indexRepository } from '@freshcontext/indexer';
 
 import { MemoryService } from '../src/memory-service.js';
-import { INSPECT_MEMORY_IMPACTS_QUERY, INSPECT_MEMORY_STATE_QUERY } from '../src/queries.js';
+import {
+  INSPECT_MEMORY_IMPACTS_QUERY,
+  INSPECT_MEMORY_STATE_QUERY,
+  INSPECT_SUPERSESSION_QUERY,
+} from '../src/queries.js';
+import { ReviewService } from '../src/review-service.js';
 import { SyncService } from '../src/sync-service.js';
 import type { MemoryRecord, RecallResult } from '../src/types.js';
 
@@ -128,6 +133,86 @@ export function calculateTotal(amount: number): number {
     }).synchronize({ repositoryId, repositoryPath });
     expect(duplicate).toEqual({ ...synchronized, reused: true });
     expect(await impactCallHops(hydra, repositoryId, transitive.memoryId)).toEqual([2]);
+
+    await expect(
+      new ReviewService({ graph: new ImmutableGraphStore(hydra), hydra }).review({
+        repositoryId,
+        originalMemoryId: transitive.memoryId,
+        commitSha: toCommit,
+        replacementClaim: 'Checkout total uses the updated tiered fee through calculateTotal',
+        evidence: [{ path: 'src/missing.ts', qualifiedName: 'missing' }],
+      }),
+    ).rejects.toMatchObject({ code: 'EVIDENCE_NOT_FOUND' });
+    expect(await memoryState(hydra, repositoryId, transitive.memoryId)).toBe('needs_review');
+
+    await expect(
+      new ReviewService({ graph: new ImmutableGraphStore(hydra), hydra }).review({
+        repositoryId,
+        originalMemoryId: unrelated.memoryId,
+        commitSha: toCommit,
+        replacementClaim: 'A replacement is not allowed for a current claim',
+        evidence: [{ path: 'src/checkout.ts', qualifiedName: 'Checkout.dynamic' }],
+      }),
+    ).rejects.toMatchObject({ code: 'MEMORY_NOT_RETRYABLE' });
+
+    const reviewInput = {
+      repositoryId,
+      originalMemoryId: transitive.memoryId,
+      commitSha: toCommit,
+      replacementClaim: 'Checkout total uses the updated tiered fee through calculateTotal',
+      evidence: [{ path: 'src/checkout.ts', qualifiedName: 'Checkout.total' }],
+    } as const;
+    await expect(
+      new ReviewService({
+        graph: new ImmutableGraphStore(hydra),
+        hydra,
+        faultInjector: (checkpoint) => {
+          if (checkpoint === 'original-superseded') {
+            throw new Error('intentional review interruption');
+          }
+        },
+      }).review(reviewInput),
+    ).rejects.toThrow('intentional review interruption');
+    const interruptedRecall = await recall(
+      memory,
+      repositoryId,
+      toCommit,
+      'Checkout.total',
+      'src/checkout.ts',
+    );
+    expect(interruptedRecall).toMatchObject({
+      memories: [],
+      withheldCount: 2,
+      abstained: true,
+      abstentionReason: 'all_matching_memory_unsafe',
+    });
+
+    const reviewed = await new ReviewService({
+      graph: new ImmutableGraphStore(hydra),
+      hydra,
+    }).review(reviewInput);
+    expect(reviewed.original.state).toBe('superseded');
+    expect(reviewed.replacement.state).toBe('current');
+    const reviewedRecall = await recall(
+      memory,
+      repositoryId,
+      toCommit,
+      'Checkout.total',
+      'src/checkout.ts',
+    );
+    expect(reviewedRecall).toMatchObject({
+      memories: [{ memoryId: reviewed.replacement.memoryId }],
+      withheldCount: 1,
+      withheldMemoryIds: [transitive.memoryId],
+      abstained: false,
+    });
+    expect(await supersessionCount(hydra, repositoryId, transitive.memoryId)).toBe(1);
+    const repeatedReview = await new ReviewService({
+      graph: new ImmutableGraphStore(hydra),
+      hydra,
+    }).review(reviewInput);
+    expect(repeatedReview).toEqual(reviewed);
+    expect(await supersessionCount(hydra, repositoryId, transitive.memoryId)).toBe(1);
   }, 180_000);
 });
 
@@ -236,6 +321,20 @@ async function impactCallHops(
     }
     return parsed.properties.callHops;
   });
+}
+
+async function supersessionCount(
+  hydra: HydraClient,
+  repositoryId: string,
+  memoryId: string,
+): Promise<number> {
+  const response = await hydra.query(INSPECT_SUPERSESSION_QUERY, {
+    parameters: {
+      originalId: deterministicIntegerId('entity', entityKeys.memory(repositoryId, memoryId)),
+    },
+    consistency: 'strong',
+  });
+  return response.rows.length;
 }
 
 function stringCell(response: HydraQueryResponse, row: number, column: string): string | null {

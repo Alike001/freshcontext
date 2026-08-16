@@ -16,7 +16,9 @@ Git commit, resolves tracked files, imports, functions, methods, and calls with 
 persists the commit-scoped graph to HydraDB. Synchronization classifies changed and removed symbols,
 runs bounded reverse call traversals in HydraDB, persists the shortest proof for each affected
 memory, and withholds that memory from later agent context. Human review, evaluation, and the web
-product remain tracked as separate public issues.
+memory, and withholds that memory from later agent context. A resumable review operation preserves
+the old claim, validates current evidence, links a replacement through `SUPERSEDES`, and activates
+only the reviewed version. Evaluation and the web product remain tracked as separate public issues.
 
 ## Run it
 
@@ -76,6 +78,14 @@ then one, two, and three reverse `CALLS` hops. One shortest deterministic path i
 affected memory as `Change`, `Impact`, and ordered `ImpactStep` records. Recall stays unavailable
 while synchronization is incomplete, and only switches to the new commit after every proof and
 memory state verifies.
+
+## Preserved review history
+
+Review never edits or deletes an unsafe memory. It creates a new evidence-bound replacement as
+`pending`, writes the chronology edge and events, marks the original `superseded`, then activates
+the replacement. If the process stops between those state changes, recall returns neither version as
+current. Retrying the same deterministic operation completes the missing steps without duplicate
+history.
 
 ## Why HydraDB matters
 
