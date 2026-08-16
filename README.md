@@ -48,9 +48,9 @@ pnpm test:integration
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
-the immutable graph contract against the pinned engine, verifies retry and overwrite behavior,
-stops HydraDB to prove that health fails closed, and removes only that isolated project's containers
-and volume.
+the immutable graph contract against the pinned engine, verifies retry and overwrite behavior, stops
+HydraDB to prove that health fails closed, and removes only that isolated project's containers and
+volume.
 
 ## Why HydraDB matters
 
