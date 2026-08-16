@@ -21,7 +21,7 @@ describe.skipIf(!contractEnabled)('HydraDB v0.1.1 immutable graph contract', () 
     const relationship = createImmutableRelationship('ROOT_HAS_REPOSITORY', root, repository);
 
     const first = await store.writeRelationship(relationship);
-    const repeated = await store.writeRelationship(relationship);
+    const repeated = await new ImmutableGraphStore(hydra).writeRelationship(relationship);
     const inspected = await store.inspectRelationship(
       relationship.kind,
       relationship.id,

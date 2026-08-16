@@ -24,6 +24,7 @@ export type EntityKind = (typeof ENTITY_KINDS)[number];
 
 export const RELATIONSHIP_KINDS = [
   'ROOT_HAS_REPOSITORY',
+  'HAS_INDEX_RUN',
   'HAS_COMMIT',
   'HAS_FILE',
   'HAS_FILE_REVISION',

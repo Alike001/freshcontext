@@ -52,6 +52,8 @@ export class GraphCollisionError extends Error {
 
 export class ImmutableGraphStore {
   readonly #hydra: HydraQueryGateway;
+  readonly #verifiedEntities = new Map<number, StoredEntity>();
+  readonly #verifiedRelationships = new Map<string, StoredRelationship>();
 
   public constructor(hydra: HydraQueryGateway) {
     this.#hydra = hydra;
@@ -64,10 +66,17 @@ export class ImmutableGraphStore {
     const existingEntities = new Map<number, StoredEntity>();
 
     for (const entity of entities) {
+      const cached = this.#verifiedEntities.get(entity.id);
+      if (cached) {
+        assertEntityMatches(entity, cached);
+        existingEntities.set(entity.id, cached);
+        continue;
+      }
       const existing = await this.inspectEntity(entity.id);
       if (existing) {
         assertEntityMatches(entity, existing);
         existingEntities.set(entity.id, existing);
+        this.#verifiedEntities.set(entity.id, existing);
       }
     }
 
@@ -82,12 +91,20 @@ export class ImmutableGraphStore {
     }
 
     for (const entity of missingEntities) {
-      existingEntities.set(entity.id, await this.requireMatchingEntity(entity));
+      const stored = await this.requireMatchingEntity(entity);
+      existingEntities.set(entity.id, stored);
+      this.#verifiedEntities.set(entity.id, stored);
     }
 
     const source = requiredStoredEntity(existingEntities, relationship.source);
     const target = requiredStoredEntity(existingEntities, relationship.target);
 
+    const cacheKey = relationshipCacheKey(relationship);
+    const cachedRelationship = this.#verifiedRelationships.get(cacheKey);
+    if (cachedRelationship) {
+      assertRelationshipMatches(relationship, cachedRelationship);
+      return { source, relationship: cachedRelationship, target };
+    }
     const existingRelationship = await this.inspectRelationship(
       relationship.kind,
       relationship.id,
@@ -96,6 +113,7 @@ export class ImmutableGraphStore {
     );
     if (existingRelationship) {
       assertRelationshipMatches(relationship, existingRelationship);
+      this.#verifiedRelationships.set(cacheKey, existingRelationship);
       return { source, relationship: existingRelationship, target };
     }
 
@@ -115,6 +133,7 @@ export class ImmutableGraphStore {
       throw new HydraRequestError('HydraDB did not return the relationship after its write', {});
     }
     assertRelationshipMatches(relationship, storedRelationship);
+    this.#verifiedRelationships.set(cacheKey, storedRelationship);
     return { source, relationship: storedRelationship, target };
   }
 
@@ -207,6 +226,10 @@ export class ImmutableGraphStore {
     assertEntityMatches(entity, stored);
     return stored;
   }
+}
+
+function relationshipCacheKey(relationship: ImmutableRelationship): string {
+  return `${relationship.source.id}:${relationship.kind}:${relationship.id}:${relationship.target.id}`;
 }
 
 function uniqueEntities(entities: readonly ImmutableEntity[]): ImmutableEntity[] {

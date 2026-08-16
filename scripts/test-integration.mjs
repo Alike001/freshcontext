@@ -20,6 +20,7 @@ try {
   assert(typeof readyBody.roundTrip?.queryId === 'string', 'Expected a real query id');
 
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'graph-contract-test']);
+  await compose(['--profile', 'test', 'run', '--build', '--rm', 'indexer-contract-test']);
 
   await compose(['stop', 'hydra']);
   const unavailableBody = await waitForUnavailable(port);

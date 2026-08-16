@@ -50,6 +50,19 @@ importers:
 
   packages/hydra: {}
 
+  packages/indexer:
+    dependencies:
+      '@freshcontext/graph':
+        specifier: workspace:*
+        version: link:../graph
+      ts-morph:
+        specifier: 28.0.0
+        version: 28.0.0
+    devDependencies:
+      '@freshcontext/hydra':
+        specifier: workspace:*
+        version: link:../hydra
+
 packages:
   '@esbuild/aix-ppc64@0.28.2':
     resolution:
@@ -581,6 +594,12 @@ packages:
         integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==,
       }
 
+  '@ts-morph/common@0.29.0':
+    resolution:
+      {
+        integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==,
+      }
+
   '@types/chai@5.2.3':
     resolution:
       {
@@ -841,6 +860,12 @@ packages:
         integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==,
       }
     engines: { node: '>=18' }
+
+  code-block-writer@13.0.3:
+    resolution:
+      {
+        integrity: sha512-Oofo0pq3IKnsFtuHqSF7TqBfr71aeyZDVJ0HpmqB7FBM2qEigL0iPONSCZSO9pE9dZTAxANe5XHG9Uy0YMv8cg==,
+      }
 
   convert-source-map@2.0.0:
     resolution:
@@ -1400,6 +1425,12 @@ packages:
       }
     engines: { node: '>=10' }
 
+  path-browserify@1.0.1:
+    resolution:
+      {
+        integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==,
+      }
+
   path-exists@4.0.0:
     resolution:
       {
@@ -1682,6 +1713,12 @@ packages:
     engines: { node: '>=18.12' }
     peerDependencies:
       typescript: '>=4.8.4'
+
+  ts-morph@28.0.0:
+    resolution:
+      {
+        integrity: sha512-Wp3tnZ2bzwxyTZMtgWVzXDfm7lB1Drz+y9DmmYH/L702PQhPyVrp3pkou3yIz4qjS14GY9kcpmLiOOMvl8oG1g==,
+      }
 
   tsx@4.23.12:
     resolution:
@@ -2052,6 +2089,12 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
+  '@ts-morph/common@0.29.0':
+    dependencies:
+      minimatch: 10.2.6
+      path-browserify: 1.0.1
+      tinyglobby: 0.2.17
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -2243,6 +2286,8 @@ snapshots:
       balanced-match: 4.0.4
 
   chai@6.2.2: {}
+
+  code-block-writer@13.0.3: {}
 
   convert-source-map@2.0.0: {}
 
@@ -2578,6 +2623,8 @@ snapshots:
     dependencies:
       p-limit: 3.1.0
 
+  path-browserify@1.0.1: {}
+
   path-exists@4.0.0: {}
 
   path-key@3.1.1: {}
@@ -2710,6 +2757,11 @@ snapshots:
   ts-api-utils@2.5.0(typescript@6.0.3):
     dependencies:
       typescript: 6.0.3
+
+  ts-morph@28.0.0:
+    dependencies:
+      '@ts-morph/common': 0.29.0
+      code-block-writer: 13.0.3
 
   tsx@4.23.12:
     dependencies:
