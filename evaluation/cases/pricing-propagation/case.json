@@ -1,0 +1,43 @@
+{
+  "caseId": "pricing-propagation",
+  "description": "A pricing rule changes underneath checkout behavior and one formatter is removed.",
+  "changeSummary": "Change fee thresholds and remove formatTotal without touching checkout.ts.",
+  "labels": [
+    {
+      "id": "direct-fee",
+      "claim": "fee applies the current pricing threshold",
+      "path": "src/pricing.ts",
+      "qualifiedName": "fee",
+      "expected": true,
+      "expectedPath": [{ "path": "src/pricing.ts", "qualifiedName": "fee" }]
+    },
+    {
+      "id": "transitive-checkout",
+      "claim": "Checkout total includes the fee through calculateTotal",
+      "path": "src/checkout.ts",
+      "qualifiedName": "Checkout.total",
+      "expected": true,
+      "expectedPath": [
+        { "path": "src/pricing.ts", "qualifiedName": "fee" },
+        { "path": "src/pricing.ts", "qualifiedName": "calculateTotal" },
+        { "path": "src/checkout.ts", "qualifiedName": "Checkout.total" }
+      ]
+    },
+    {
+      "id": "removed-formatter",
+      "claim": "formatTotal returns the calculated amount as text",
+      "path": "src/pricing.ts",
+      "qualifiedName": "formatTotal",
+      "expected": true,
+      "expectedPath": [{ "path": "src/pricing.ts", "qualifiedName": "formatTotal" }]
+    },
+    {
+      "id": "same-file-unrelated",
+      "claim": "unrelatedLabel returns the stable pricing label",
+      "path": "src/pricing.ts",
+      "qualifiedName": "unrelatedLabel",
+      "expected": false,
+      "expectedPath": null
+    }
+  ]
+}

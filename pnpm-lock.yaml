@@ -75,6 +75,21 @@ importers:
         specifier: workspace:*
         version: link:../indexer
 
+  packages/evaluation:
+    dependencies:
+      '@freshcontext/core':
+        specifier: workspace:*
+        version: link:../core
+      '@freshcontext/graph':
+        specifier: workspace:*
+        version: link:../graph
+      '@freshcontext/hydra':
+        specifier: workspace:*
+        version: link:../hydra
+      '@freshcontext/indexer':
+        specifier: workspace:*
+        version: link:../indexer
+
   packages/graph:
     dependencies:
       '@freshcontext/hydra':

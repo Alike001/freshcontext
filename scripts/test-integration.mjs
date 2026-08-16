@@ -23,13 +23,14 @@ try {
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'indexer-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'mcp-contract-test']);
   await compose(['--profile', 'test', 'run', '--build', '--rm', 'core-contract-test']);
+  await compose(['--profile', 'test', 'run', '--build', '--rm', 'evaluation-contract-test']);
 
   await compose(['stop', 'hydra']);
   const unavailableBody = await waitForUnavailable(port);
   assert(unavailableBody.hydra === 'unavailable', 'Expected HydraDB to fail closed');
 
   console.log(
-    'Integration proof passed: HydraDB health, graph, indexer, MCP memory, and fail-closed behavior.',
+    'Integration proof passed: HydraDB health, graph, indexer, MCP memory, evaluation, and fail-closed behavior.',
   );
 } catch (error) {
   testFailed = true;

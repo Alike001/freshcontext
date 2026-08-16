@@ -1,0 +1,27 @@
+{
+  "name": "@freshcontext/evaluation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "evaluate": "tsx src/run.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@freshcontext/core": "workspace:*",
+    "@freshcontext/graph": "workspace:*",
+    "@freshcontext/hydra": "workspace:*",
+    "@freshcontext/indexer": "workspace:*"
+  }
+}

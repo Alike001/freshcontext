@@ -1,0 +1,70 @@
+{
+  "caseId": "policy-depth",
+  "description": "An authorization policy changes below increasingly distant callers.",
+  "changeSummary": "Tighten isAllowed without touching any guard or entry-point file.",
+  "labels": [
+    {
+      "id": "direct-policy",
+      "claim": "isAllowed enforces the active role policy",
+      "path": "src/policy.ts",
+      "qualifiedName": "isAllowed",
+      "expected": true,
+      "expectedPath": [{ "path": "src/policy.ts", "qualifiedName": "isAllowed" }]
+    },
+    {
+      "id": "two-hop-guard",
+      "claim": "authorize reflects the active role policy through makeDecision",
+      "path": "src/guards.ts",
+      "qualifiedName": "authorize",
+      "expected": true,
+      "expectedPath": [
+        { "path": "src/policy.ts", "qualifiedName": "isAllowed" },
+        { "path": "src/policy.ts", "qualifiedName": "makeDecision" },
+        { "path": "src/guards.ts", "qualifiedName": "authorize" }
+      ]
+    },
+    {
+      "id": "three-hop-api",
+      "claim": "authorizeApi reflects the active role policy through the guard chain",
+      "path": "src/guards.ts",
+      "qualifiedName": "authorizeApi",
+      "expected": true,
+      "expectedPath": [
+        { "path": "src/policy.ts", "qualifiedName": "isAllowed" },
+        { "path": "src/policy.ts", "qualifiedName": "makeDecision" },
+        { "path": "src/guards.ts", "qualifiedName": "authorize" },
+        { "path": "src/guards.ts", "qualifiedName": "authorizeApi" }
+      ]
+    },
+    {
+      "id": "beyond-boundary",
+      "claim": "authorizeBatch reflects the active role policy through the full guard chain",
+      "path": "src/guards.ts",
+      "qualifiedName": "authorizeBatch",
+      "expected": true,
+      "expectedPath": [
+        { "path": "src/policy.ts", "qualifiedName": "isAllowed" },
+        { "path": "src/policy.ts", "qualifiedName": "makeDecision" },
+        { "path": "src/guards.ts", "qualifiedName": "authorize" },
+        { "path": "src/guards.ts", "qualifiedName": "authorizeApi" },
+        { "path": "src/guards.ts", "qualifiedName": "authorizeBatch" }
+      ]
+    },
+    {
+      "id": "same-file-unrelated",
+      "claim": "policyLabel returns the stable policy label",
+      "path": "src/policy.ts",
+      "qualifiedName": "policyLabel",
+      "expected": false,
+      "expectedPath": null
+    },
+    {
+      "id": "separate-unrelated",
+      "claim": "stableGuard remains independent of the role policy",
+      "path": "src/guards.ts",
+      "qualifiedName": "stableGuard",
+      "expected": false,
+      "expectedPath": null
+    }
+  ]
+}

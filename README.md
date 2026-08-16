@@ -15,10 +15,11 @@ graph writes and strong reads, and exposes a fail-closed health endpoint. The in
 Git commit, resolves tracked files, imports, functions, methods, and calls with ts-morph, and
 persists the commit-scoped graph to HydraDB. Synchronization classifies changed and removed symbols,
 runs bounded reverse call traversals in HydraDB, persists the shortest proof for each affected
-memory, and withholds that memory from later agent context. Human review, evaluation, and the web
 memory, and withholds that memory from later agent context. A resumable review operation preserves
 the old claim, validates current evidence, links a replacement through `SUPERSEDES`, and activates
-only the reviewed version. Evaluation and the web product remain tracked as separate public issues.
+only the reviewed version. The reproducible evaluation runs real committed TypeScript changes and
+compares graph traversal with a direct-file baseline. The web product remains a separate public
+issue.
 
 ## Run it
 
@@ -55,6 +56,20 @@ The integration test creates an isolated Compose project, proves the real HydraD
 the immutable graph, real Git indexer, and MCP stdio contracts against the pinned engine, verifies
 retry and overwrite behavior, interrupts and resumes a real impact sync, stops HydraDB to prove that
 health fails closed, and removes only that isolated project's containers and volume.
+
+## Reproduce the evaluation
+
+Run the pinned cases through real Git repositories and HydraDB OSS with one command:
+
+```bash
+pnpm evaluate
+```
+
+The command writes `.freshcontext/evaluation/latest.json`. The dataset includes direct, removed,
+unrelated, two-hop, three-hop, and intentionally out-of-bound four-hop cases. Results report the
+full confusion matrix, precision, recall, false-positive ids, false-negative ids, and the same
+metrics for a direct-file baseline. The four-hop miss is kept visible because V1 deliberately stops
+at three reverse call hops.
 
 ## Agent tool contract
 

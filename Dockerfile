@@ -12,6 +12,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/mcp/package.json apps/mcp/package.json
 COPY apps/server/package.json apps/server/package.json
 COPY packages/core/package.json packages/core/package.json
+COPY packages/evaluation/package.json packages/evaluation/package.json
 COPY packages/graph/package.json packages/graph/package.json
 COPY packages/hydra/package.json packages/hydra/package.json
 COPY packages/indexer/package.json packages/indexer/package.json
@@ -21,6 +22,8 @@ RUN pnpm install --frozen-lockfile
 COPY apps/server apps/server
 COPY apps/mcp apps/mcp
 COPY packages/core packages/core
+COPY packages/evaluation packages/evaluation
+COPY evaluation evaluation
 COPY packages/graph packages/graph
 COPY packages/hydra packages/hydra
 COPY packages/indexer packages/indexer

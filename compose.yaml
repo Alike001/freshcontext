@@ -93,6 +93,32 @@ services:
     volumes:
       - hydra-data:/run/hydra:ro
 
+  evaluation:
+    profiles: ['tools']
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    depends_on:
+      hydra:
+        condition: service_started
+      hydra-init:
+        condition: service_completed_successfully
+    command: ['pnpm', '--filter', '@freshcontext/evaluation', 'evaluate']
+    environment:
+      HYDRA_QUERY_BASE_URL: http://hydra:8443
+      HYDRA_ADMIN_BASE_URL: http://hydra:9090
+      HYDRA_GRAPH_ID: freshcontext
+      HYDRA_GRAPH_NAMESPACE: freshcontext
+      HYDRA_CELL_ID: cell-0
+      HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
+      HYDRA_REQUEST_TIMEOUT_MS: '5000'
+      FRESHCONTEXT_EVALUATION_OUTPUT: /output/latest.json
+    volumes:
+      - hydra-data:/run/hydra:ro
+      - ./.freshcontext/evaluation:/output
+
   graph-contract-test:
     profiles: ['test']
     build:
@@ -186,6 +212,30 @@ services:
       HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
       HYDRA_REQUEST_TIMEOUT_MS: '5000'
       HYDRA_CORE_CONTRACT_TEST: '1'
+    volumes:
+      - hydra-data:/run/hydra:ro
+
+  evaluation-contract-test:
+    profiles: ['test']
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    depends_on:
+      hydra:
+        condition: service_started
+      hydra-init:
+        condition: service_completed_successfully
+    command: ['pnpm', '--filter', '@freshcontext/evaluation', 'test', 'test/contract.test.ts']
+    environment:
+      HYDRA_QUERY_BASE_URL: http://hydra:8443
+      HYDRA_ADMIN_BASE_URL: http://hydra:9090
+      HYDRA_GRAPH_ID: freshcontext
+      HYDRA_GRAPH_NAMESPACE: freshcontext
+      HYDRA_CELL_ID: cell-0
+      HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
+      HYDRA_REQUEST_TIMEOUT_MS: '5000'
+      HYDRA_EVALUATION_CONTRACT_TEST: '1'
     volumes:
       - hydra-data:/run/hydra:ro
 
