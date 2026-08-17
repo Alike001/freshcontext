@@ -1,12 +1,40 @@
 # FreshContext
 
-FreshContext is an evidence-bound memory layer for coding agents. It is being built for Hack Hydra
-on top of the open-source HydraDB graph database.
+FreshContext is an evidence-bound memory layer for coding agents. When committed code invalidates
+something an agent remembers, FreshContext withholds the stale claim and shows the exact call path
+that explains why.
 
-The product goal is simple: when code changes invalidate something an agent remembers, FreshContext
-withholds the stale claim and shows the exact code path that explains why.
+Hack Hydra 2026, Track 2B: Repos, dependencies, and code as graphs.
 
-## Current build status
+![FreshContext Proof Console showing a two-hop HydraDB impact proof](demo/screenshots/proof-console.png)
+
+## Run in one command
+
+Prerequisite: Docker Engine with Docker Compose v2.
+
+```bash
+docker compose up --build --wait
+```
+
+Open <http://localhost:3000>. The command builds the product, starts the pinned HydraDB OSS engine,
+creates a real two-commit TypeScript repository, indexes it, stores evidence-bound memories, and
+synchronizes the code change. No account, API key, or repository configuration is required. A cold
+Docker cache can take a few minutes, and `--wait` returns only after the product reports healthy.
+
+The shortest judge path is:
+
+1. Read the problem and mechanism on Overview.
+2. Open Proof Console and inspect the review-needed claim, ordered HydraDB path, and exact Git diff.
+3. Submit the suggested correction and see the original become superseded while the replacement
+   becomes current.
+4. Open Evaluation to compare the graph result with the direct-file baseline, including the visible
+   four-hop limit.
+5. Open Setup to verify the real HydraDB round trip and selected Git commit.
+
+Stop the stack with `docker compose down`. Use `docker compose down --volumes` only when you
+intentionally want to delete the local HydraDB data, generated example repository, and token.
+
+## What is built
 
 The repository contains the reproducible runtime foundation, immutable graph persistence, the
 TypeScript repository indexer, local MCP memory surface, committed-change impact engine, and a
@@ -23,34 +51,10 @@ baseline. The interface labels example data and reports unavailable or unconfigu
 of inventing repository activity. Its Evaluation route reads a strictly validated, versioned result
 from the same pinned-Hydra command so the proof remains available offline.
 
-The default startup also materializes a labelled checkout example as a real two-commit Git
-repository. FreshContext indexes its baseline, stores evidence-bound claims, synchronizes its fee
-change, and renders the resulting HydraDB impact path and Git diff in the Proof Console. Judges can
-complete an immutable review and supersession without configuring another repository first.
-
-## Run it
-
-Prerequisites: Docker Engine with Docker Compose v2.
-
-```bash
-docker compose up --build --wait
-```
-
-Then open <http://localhost:3000>. The landing page, Proof Console, Evaluation, and Setup routes are
-served from the same production container. Setup reports the live HydraDB round trip and repository
-state, including the labelled example source. You can inspect the raw readiness response at
-<http://localhost:3000/api/health>. A ready response means FreshContext completed a real
-authenticated write-read round trip through HydraDB. The generated credential stays in a Docker
-volume and is never returned by the API.
-
-Stop the local stack with:
-
-```bash
-docker compose down
-```
-
-Use `docker compose down --volumes` only when you intentionally want to delete the local HydraDB
-data, generated example repository, and token.
+The default startup materializes a labelled checkout example as a real two-commit Git repository.
+FreshContext indexes its baseline, stores evidence-bound claims, synchronizes its fee change, and
+renders the resulting HydraDB impact path and Git diff in the Proof Console. Judges can complete an
+immutable review and supersession without configuring another repository first.
 
 ## Local quality checks
 
@@ -140,6 +144,21 @@ The runtime is pinned to HydraDB `v0.1.1`, source revision
 ghcr.io/hydra-db/hydradb@sha256:db78309a233be54662db29744047e985a39b51c45a270d1a1f47c31a62cdb709
 ```
 
+FreshContext supplies the application layers that HydraDB OSS doesn't provide here: TypeScript
+ingestion, an immutable code and memory schema, bounded impact queries, safe recall, human
+supersession, and result evaluation. Removing HydraDB removes the transitive proof, lifecycle
+history, and the product's safe recall decision.
+
+## Solo build and attribution
+
+FreshContext was built solo by [Alike001](https://github.com/Alike001). OpenAI Codex assisted with
+research, implementation, testing, and documentation. Every product decision and the final code were
+reviewed and verified by the participant.
+
+HydraDB OSS, direct libraries, development tools, and bundled fonts are credited in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Exact dependency versions are pinned in
+`pnpm-lock.yaml` and the container image digests are pinned in `Dockerfile` and `compose.yaml`.
+
 ## License
 
-[MIT](LICENSE)
+FreshContext source is [MIT licensed](LICENSE). Third-party components retain their own licenses.
