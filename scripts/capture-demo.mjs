@@ -1,3 +1,5 @@
+/* global HTMLElement, document, window */
+
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -22,6 +24,8 @@ const video = page.video();
 try {
   await page.goto(baseUrl);
   await page.getByText('HydraDB connected', { exact: true }).waitFor();
+  await page.getByText('Verified example', { exact: true }).waitFor();
+  await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'overview.png'),
     fullPage: false,
@@ -33,6 +37,7 @@ try {
   await page.getByRole('heading', { name: 'Why this claim was withheld' }).waitFor();
   await page.getByLabel('Code change').waitFor();
   await page.waitForTimeout(1_200);
+  await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'proof-console.png'),
     fullPage: true,
@@ -43,6 +48,7 @@ try {
     await page.getByText('Supersession verified', { exact: true }).waitFor();
   }
   await page.waitForTimeout(1_000);
+  await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'review-complete.png'),
     fullPage: true,
@@ -52,6 +58,7 @@ try {
   await page.getByText('Verified offline reference', { exact: true }).waitFor();
   await page.getByText('100.0%', { exact: true }).first().waitFor();
   await page.waitForTimeout(1_000);
+  await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'evaluation.png'),
     fullPage: true,
@@ -66,6 +73,7 @@ try {
   await page.getByRole('link', { name: 'Setup', exact: true }).click();
   await page.getByText('Connected and verified', { exact: true }).waitFor();
   await page.waitForTimeout(1_200);
+  await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'setup.png'),
     fullPage: true,
@@ -83,3 +91,11 @@ await rename(generatedVideo, videoTarget);
 
 process.stdout.write(`Demo screenshots written to ${screenshotDirectory}\n`);
 process.stdout.write(`Offline product proof video written to ${videoTarget}\n`);
+
+async function prepareStaticFrame(targetPage) {
+  await targetPage.evaluate(async () => {
+    await document.fonts.ready;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+}

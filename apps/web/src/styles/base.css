@@ -163,7 +163,7 @@ a:focus-visible {
 .hero-copy h1 {
   max-width: 18ch;
   margin: 0;
-  font-size: clamp(3.4rem, 4vw, 6.4rem);
+  font-size: clamp(2.9rem, 3.6vw, 4.8rem);
   font-weight: 560;
   letter-spacing: -0.072em;
   line-height: 0.93;
@@ -624,7 +624,7 @@ a:focus-visible {
 .document-header h1 {
   max-width: 16ch;
   margin: var(--space-4) 0 0;
-  font-size: clamp(2.8rem, 6vw, 6rem);
+  font-size: clamp(2.5rem, 4.5vw, 4.75rem);
   font-weight: 560;
   letter-spacing: -0.06em;
   line-height: 0.96;
@@ -867,7 +867,7 @@ a:focus-visible {
 .score-featured > strong,
 .score-featured > span:last-child {
   font-family: var(--font-code);
-  font-size: clamp(1.8rem, 4vw, 4rem);
+  font-size: clamp(1.75rem, 3.2vw, 3.25rem);
   font-weight: 520;
   letter-spacing: -0.05em;
 }
@@ -896,7 +896,7 @@ a:focus-visible {
 .evaluation-reproduce h2 {
   max-width: 18ch;
   margin: var(--space-3) 0 0;
-  font-size: clamp(2rem, 3.5vw, 3.8rem);
+  font-size: clamp(1.8rem, 3vw, 3.25rem);
   font-weight: 560;
   letter-spacing: -0.05em;
   line-height: 1;
@@ -1510,7 +1510,7 @@ a:focus-visible {
 .empty-product-main h1 {
   max-width: 13ch;
   margin: var(--space-4) 0 0;
-  font-size: clamp(2.8rem, 6vw, 6rem);
+  font-size: clamp(2.5rem, 4.5vw, 4.75rem);
   font-weight: 560;
   letter-spacing: -0.06em;
   line-height: 0.96;
@@ -1709,7 +1709,7 @@ a:focus-visible {
   }
 
   .hero-copy h1 {
-    font-size: clamp(3rem, 15vw, 4.5rem);
+    font-size: clamp(2.5rem, 12vw, 3.35rem);
   }
 
   .proof-dossier {

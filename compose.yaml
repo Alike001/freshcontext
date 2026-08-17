@@ -62,7 +62,7 @@ services:
       HYDRA_GRAPH_NAMESPACE: freshcontext
       HYDRA_CELL_ID: cell-0
       HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
-      HYDRA_REQUEST_TIMEOUT_MS: '2000'
+      HYDRA_REQUEST_TIMEOUT_MS: '5000'
       HYDRA_STARTUP_TIMEOUT_MS: '120000'
       FRESHCONTEXT_REPOSITORY_ID: freshcontext-checkout-example
       FRESHCONTEXT_REPOSITORY_PATH: /data/example/checkout

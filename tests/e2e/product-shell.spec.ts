@@ -12,7 +12,8 @@ test('overview enters the real setup flow without browser errors', async ({ page
   await expect(
     page.getByRole('heading', { name: 'Your agent remembers. Your code moved on.' }),
   ).toBeVisible();
-  await expect(page.getByText('Example data', { exact: true })).toBeVisible();
+  await expect(page.getByText('Verified example', { exact: true })).toBeVisible();
+  await expect(page.getByText('Memory claim', { exact: true })).toBeVisible();
   await expect(page.getByText('HydraDB connected', { exact: true })).toBeVisible();
   await page.screenshot({
     path: `/tmp/freshcontext-${testInfo.project.name}-overview.png`,
@@ -113,5 +114,14 @@ test('Proof Console failure stays explicit and shows no cached claim', async ({ 
 
   await expect(page.getByRole('alert')).toContainText('Proof Console unavailable');
   await expect(page.getByRole('alert')).toContainText('No cached claim was shown');
+  await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
+});
+
+test('Overview proof failure stays explicit and shows no hardcoded dossier', async ({ page }) => {
+  await page.route('**/api/console*', (route) => route.abort('failed'));
+  await page.goto('/');
+
+  await expect(page.getByText('Live proof unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText('Memory claim', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
 });

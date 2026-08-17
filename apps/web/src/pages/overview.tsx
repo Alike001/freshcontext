@@ -1,20 +1,33 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { CommandBlock } from '../components/command-block.js';
-import { ProofPath } from '../components/proof-path.js';
+import { ProofPath, type ProofStep } from '../components/proof-path.js';
+import { fetchConsole, type ConsoleResponse, type MemoryState } from '../data/console.js';
 import { useSetup } from '../data/setup.js';
 
-const examplePath = [
-  { name: 'fee()', location: 'src/pricing.ts' },
-  { name: 'calculateTotal()', location: 'src/pricing.ts' },
-  { name: 'Checkout.total()', location: 'src/checkout.ts' },
-  { name: 'Memory', location: 'evidence-bound claim' },
-] as const;
+type ProofResource =
+  | { readonly state: 'loading'; readonly data: null }
+  | { readonly state: 'ready'; readonly data: ConsoleResponse }
+  | { readonly state: 'error'; readonly data: null };
 
 export function OverviewPage() {
   const { resource } = useSetup();
+  const [proof, setProof] = useState<ProofResource>({ state: 'loading', data: null });
   const startupCommand =
     resource.state === 'ready' ? resource.data.startupCommand : 'docker compose up --build --wait';
+  const dossier = proof.state === 'ready' ? proof.data.selected : null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchConsole(undefined, controller.signal)
+      .then((data) => setProof({ state: 'ready', data }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setProof({ state: 'error', data: null });
+      });
+    return () => controller.abort();
+  }, []);
 
   return (
     <div className="overview-page">
@@ -44,28 +57,57 @@ export function OverviewPage() {
           <header className="section-rule compact">
             <span className="rule-mark" aria-hidden="true" />
             <h2 id="proof-dossier-title">Proof dossier</h2>
-            <span className="example-label">Example data</span>
+            <span className="example-label">
+              {proof.state === 'ready'
+                ? proof.data.source === 'example'
+                  ? 'Verified example'
+                  : 'Configured repository'
+                : 'Live verification'}
+            </span>
           </header>
-          <div className="dossier-grid">
-            <div className="dossier-claim">
-              <span className="technical-label">Memory claim</span>
-              <p>Checkout total includes the fee through calculateTotal.</p>
+          {proof.state === 'loading' ? (
+            <OverviewProofStatus
+              title="Verifying HydraDB proof"
+              detail="Reading the active graph."
+            />
+          ) : proof.state === 'error' ? (
+            <OverviewProofStatus
+              title="Live proof unavailable"
+              detail="Open the Proof Console to retry the verified read."
+            />
+          ) : dossier ? (
+            <div className="dossier-grid">
+              <div className="dossier-claim">
+                <span className="technical-label">Memory claim</span>
+                <p>{dossier.memory.claim}</p>
+              </div>
+              <div className="dossier-change">
+                <span className="technical-label">
+                  {dossier.impact ? 'Committed change' : 'Selected evidence'}
+                </span>
+                <strong>{proofSubjectName(dossier)}</strong>
+                <code>{proofSubjectLocation(dossier)}</code>
+              </div>
+              <div className="dossier-path">
+                <span className="technical-label">HydraDB path, ordered</span>
+                {dossier.impact ? (
+                  <ProofPath steps={proofSteps(dossier.impact.steps)} />
+                ) : (
+                  <p>No invalidation path applies to this current memory.</p>
+                )}
+              </div>
+              <div className="dossier-result">
+                <span className="technical-label">Result</span>
+                <strong>{resultLabel(dossier.memory.state)}</strong>
+                <p>{resultDetail(dossier.memory.state)}</p>
+              </div>
             </div>
-            <div className="dossier-change">
-              <span className="technical-label">Committed change</span>
-              <strong>fee()</strong>
-              <code>pricing fixture</code>
-            </div>
-            <div className="dossier-path">
-              <span className="technical-label">HydraDB path, ordered</span>
-              <ProofPath steps={examplePath} />
-            </div>
-            <div className="dossier-result">
-              <span className="technical-label">Result</span>
-              <strong>Withheld</strong>
-              <p>Unsafe memory stays out of active recall.</p>
-            </div>
-          </div>
+          ) : (
+            <OverviewProofStatus
+              title="No memory indexed yet"
+              detail="Open Setup to index a repository and create evidence-bound memory."
+            />
+          )}
         </article>
       </section>
 
@@ -154,4 +196,59 @@ export function OverviewPage() {
       </footer>
     </div>
   );
+}
+
+function OverviewProofStatus({
+  title,
+  detail,
+}: {
+  readonly title: string;
+  readonly detail: string;
+}) {
+  return (
+    <div className="dossier-grid" role="status">
+      <div className="dossier-claim">
+        <span className="technical-label">Proof state</span>
+        <p>{title}</p>
+      </div>
+      <div className="dossier-result">
+        <span className="technical-label">Detail</span>
+        <p>{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function proofSteps(
+  steps: NonNullable<NonNullable<ConsoleResponse['selected']>['impact']>['steps'],
+): ProofStep[] {
+  return steps.map((step) => ({
+    name: step.nodeKind === 'Memory' ? 'Memory' : (step.qualifiedName ?? 'Unknown symbol'),
+    location: step.nodeKind === 'Memory' ? 'evidence-bound claim' : (step.path ?? 'unknown path'),
+  }));
+}
+
+function proofSubjectName(dossier: NonNullable<ConsoleResponse['selected']>): string {
+  const symbolKey = dossier.impact?.change.symbolKey;
+  if (symbolKey) return symbolKey.split('::').at(-1) ?? symbolKey;
+  return dossier.memory.evidence[0]?.qualifiedName ?? 'No evidence symbol';
+}
+
+function proofSubjectLocation(dossier: NonNullable<ConsoleResponse['selected']>): string {
+  const symbolKey = dossier.impact?.change.symbolKey;
+  return symbolKey?.split('::')[0] ?? dossier.memory.evidence[0]?.path ?? 'No evidence path';
+}
+
+function resultLabel(state: MemoryState): string {
+  if (state === 'needs_review') return 'Withheld';
+  if (state === 'superseded') return 'Superseded';
+  if (state === 'current') return 'Current';
+  return 'Pending';
+}
+
+function resultDetail(state: MemoryState): string {
+  if (state === 'needs_review') return 'Unsafe memory stays out of active recall.';
+  if (state === 'superseded') return 'The replacement remains active and the history stays intact.';
+  if (state === 'current') return 'The claim is safe to return at the selected commit.';
+  return 'The claim remains unavailable until its evidence is verified.';
 }
