@@ -34,6 +34,34 @@ The shortest judge path is:
 Stop the stack with `docker compose down`. Use `docker compose down --volumes` only when you
 intentionally want to delete the local HydraDB data, generated example repository, and token.
 
+## Use your own repository
+
+FreshContext can index one local TypeScript repository through the production stack. The repository
+must have a clean committed worktree, a tracked root `tsconfig.json`, and tracked `.ts` or `.tsx`
+files. Start it with the repository mounted read-only:
+
+```bash
+FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path/to/repository \
+FRESHCONTEXT_REPOSITORY_ID=my-repository \
+docker compose -f compose.yaml -f compose.repository.yaml up --build --wait
+```
+
+Open <http://localhost:3000/setup> and select `Index repository`. Setup shows the active indexing
+state, the verified commit, ingestion counts, skipped files, and syntax diagnostics. After making
+and committing a code change on the host, select `Sync committed changes`. A dirty worktree, missing
+`tsconfig.json`, unreadable path, or non-Git directory is rejected with an explicit state. The
+browser cannot submit another filesystem path, and the container cannot write to the mounted
+repository.
+
+To connect an MCP client to the same configured graph, use this stdio command and pass the Setup
+repository id and indexed commit to the FreshContext tools:
+
+```bash
+FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path/to/repository \
+FRESHCONTEXT_REPOSITORY_ID=my-repository \
+docker compose -f compose.yaml -f compose.repository.yaml --profile tools run --rm -T mcp
+```
+
 ## What is built
 
 The repository contains the reproducible runtime foundation, immutable graph persistence, the
@@ -67,6 +95,7 @@ pnpm install --frozen-lockfile
 pnpm check
 pnpm build
 pnpm test:integration
+pnpm test:configured
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
@@ -74,6 +103,10 @@ the immutable graph, real Git indexer, and MCP stdio contracts against the pinne
 retry and overwrite behavior, checks the production web shell, runs the example Proof Console and
 review path, interrupts and resumes a real impact sync, stops HydraDB to prove that health fails
 closed, and removes only that isolated project's containers and volume.
+
+The configured-repository test mounts a separate real Git repository read-only, indexes it through
+the product API, synchronizes a second committed revision, and verifies that an uncommitted edit is
+rejected and remains visible in Setup.
 
 The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, the
 live impact dossier, immutable review, and unavailable-service paths:

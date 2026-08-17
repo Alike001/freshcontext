@@ -22,6 +22,7 @@
     "start": "docker compose up --build --wait",
     "stop": "docker compose down",
     "test": "pnpm --recursive test",
+    "test:configured": "node scripts/test-configured-repository.mjs",
     "test:e2e": "playwright test",
     "test:integration": "node scripts/test-integration.mjs",
     "typecheck": "pnpm --recursive typecheck"

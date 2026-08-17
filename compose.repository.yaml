@@ -1,0 +1,9 @@
+services:
+  freshcontext:
+    environment:
+      FRESHCONTEXT_REPOSITORY_ID: ${FRESHCONTEXT_REPOSITORY_ID:-local-typescript-repository}
+      FRESHCONTEXT_REPOSITORY_PATH: /workspace/repository
+      FRESHCONTEXT_EXAMPLE_MODE: '0'
+    volumes:
+      - ${FRESHCONTEXT_HOST_REPOSITORY_PATH:?Set FRESHCONTEXT_HOST_REPOSITORY_PATH to an absolute
+        repository path}:/workspace/repository:ro

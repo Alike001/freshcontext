@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 test('overview enters the real setup flow without browser errors', async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
@@ -111,6 +111,76 @@ test('mobile layout does not overflow and names a failed local service', async (
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
 });
 
+test('configured repository can be indexed from Setup with explicit progress', async ({
+  page,
+}, testInfo) => {
+  await page.route('**/api/setup', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: setupBody('not_indexed') }),
+  );
+  await page.route('**/api/repositories/index', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: setupBody('indexed'),
+    }),
+  );
+
+  await page.goto('/setup');
+  await expect(page.getByText('Selected, waiting for an index', { exact: true })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  const indexButton = page.getByRole('button', { name: 'Index repository', exact: true });
+  await activateButton(page, indexButton, testInfo);
+  await expect(page.getByText('Indexed', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sync committed changes' })).toBeVisible();
+  await expect(page.getByText('2 files, 3 calls, 1 imports, 0 skipped')).toBeVisible();
+});
+
+test('configured repository indexing state is explicit and non-interactive', async ({ page }) => {
+  await page.route('**/api/setup', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: setupBody('indexing') }),
+  );
+
+  await page.goto('/setup');
+
+  await expect(page.getByRole('button', { name: 'Indexing repository…' })).toBeDisabled();
+  await expect(page.getByText('Indexing through Git and HydraDB', { exact: true })).toBeVisible();
+});
+
+test('configured repository validation failure stays explicit and retryable', async ({
+  page,
+}, testInfo) => {
+  let setupState: 'not_indexed' | 'invalid_repository' = 'not_indexed';
+  await page.route('**/api/setup', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: setupBody(setupState),
+    }),
+  );
+  await page.route('**/api/repositories/index', (route) => {
+    setupState = 'invalid_repository';
+    return route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'unavailable',
+        message: 'Repository must have a clean worktree.',
+      }),
+    });
+  });
+
+  await page.goto('/setup');
+  await page.evaluate(() => document.fonts.ready);
+  const indexButton = page.getByRole('button', { name: 'Index repository', exact: true });
+  await activateButton(page, indexButton, testInfo);
+
+  await expect(page.getByText('Repository validation failed', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Repository must have a clean worktree.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry repository index' })).toBeVisible();
+});
+
 test('evaluation failure stays explicit and shows no benchmark numbers', async ({ page }) => {
   await page.route('**/api/evaluation/latest', (route) => route.abort('failed'));
   await page.goto('/evaluation');
@@ -129,6 +199,54 @@ test('Proof Console failure stays explicit and shows no cached claim', async ({ 
   await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
 });
 
+test('Proof Console names a verified memory with no affected path', async ({ page }) => {
+  const memory = {
+    memoryId: 'memory-current',
+    claim: 'The parser keeps the committed source order.',
+    state: 'current',
+    sourceCommit: 'a'.repeat(40),
+    createdAt: '2026-08-17T10:00:00.000Z',
+    evidence: [{ path: 'src/parser.ts', qualifiedName: 'parseSource' }],
+  };
+  await page.route('**/api/console*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ready',
+        source: 'configured',
+        repositoryId: 'configured-repository',
+        repositoryLabel: 'configured-repository',
+        selectedCommit: 'a'.repeat(40),
+        memories: [memory],
+        selected: {
+          memory,
+          impact: null,
+          chronology: [
+            {
+              eventType: 'created',
+              state: 'current',
+              commitSha: 'a'.repeat(40),
+              occurredAt: '2026-08-17T10:00:00.000Z',
+            },
+          ],
+          replacement: null,
+          original: null,
+          diff: null,
+        },
+      }),
+    }),
+  );
+
+  await page.goto('/console');
+
+  await expect(page.getByText('No active impact proof', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('This memory is not currently withheld by a synchronized code change.'),
+  ).toBeVisible();
+  await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
+});
+
 test('Overview proof failure stays explicit and shows no hardcoded dossier', async ({ page }) => {
   await page.route('**/api/console*', (route) => route.abort('failed'));
   await page.goto('/');
@@ -137,3 +255,53 @@ test('Overview proof failure stays explicit and shows no hardcoded dossier', asy
   await expect(page.getByText('Memory claim', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
 });
+
+function setupBody(state: 'not_indexed' | 'indexing' | 'indexed' | 'invalid_repository'): string {
+  return JSON.stringify({
+    status: 'ready',
+    hydra: 'connected',
+    startupCommand:
+      'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait',
+    repository: {
+      state,
+      source: 'configured',
+      id: 'configured-repository',
+      path: '/workspace/repository',
+      indexedCommit: state === 'indexed' ? 'a'.repeat(40) : null,
+      statistics:
+        state === 'indexed'
+          ? {
+              indexedFileCount: 2,
+              callEdgeCount: 3,
+              importEdgeCount: 1,
+              skippedFileCount: 0,
+              syntacticDiagnosticCount: 0,
+            }
+          : null,
+      message:
+        state === 'invalid_repository'
+          ? 'Repository must have a clean worktree.'
+          : state === 'indexing'
+            ? 'FreshContext is indexing the configured repository through Git and HydraDB.'
+            : state === 'indexed'
+              ? 'The selected repository has a completed HydraDB index.'
+              : 'The repository is selected but has no completed index.',
+    },
+  });
+}
+
+async function activateButton(page: Page, button: Locator, testInfo: TestInfo): Promise<void> {
+  await button.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', inline: 'nearest' }),
+  );
+  await page.evaluate(
+    () => new Promise<void>((resolveFrame) => requestAnimationFrame(() => resolveFrame())),
+  );
+  if (testInfo.project.name !== 'mobile-chromium') {
+    await button.click();
+    return;
+  }
+  const box = await button.boundingBox();
+  if (!box) throw new Error('Mobile action button has no rendered bounds');
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+}

@@ -6,7 +6,7 @@ html {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-display);
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 body {
@@ -740,6 +740,24 @@ a:focus-visible {
 
 .status-ledger .ledger-message dd {
   font-family: var(--font-display);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.repository-actions {
+  display: grid;
+  grid-template-columns: max-content minmax(16rem, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding: var(--space-5) 0;
+  border-bottom: var(--border-strong);
+}
+
+.repository-actions p {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--ink-700);
   font-size: 0.9rem;
   line-height: 1.55;
 }
@@ -1982,6 +2000,14 @@ a:focus-visible {
   .status-ledger > div {
     grid-template-columns: 1fr;
     gap: var(--space-2);
+  }
+
+  .repository-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-actions .button {
+    width: 100%;
   }
 
   .evaluation-provenance dl {

@@ -31,6 +31,18 @@ describe('setup API parser', () => {
     ).toThrow('Invalid repository setup state');
   });
 
+  it.each(['indexing', 'syncing', 'invalid_repository'] as const)(
+    'accepts the explicit %s repository state',
+    (state) => {
+      expect(
+        parseSetupResponse({
+          ...setupResponse,
+          repository: { ...setupResponse.repository, state },
+        }).repository.state,
+      ).toBe(state);
+    },
+  );
+
   it('rejects non-numeric repository statistics', () => {
     expect(() =>
       parseSetupResponse({

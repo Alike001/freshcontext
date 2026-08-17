@@ -6,6 +6,8 @@ import type { HydraHealthStatus } from '@freshcontext/hydra';
 
 import type { ProductConsoleResponse } from './console.js';
 import type { EvaluationGateway } from './evaluation.js';
+import type { RepositoryOperationSnapshot } from './repository-operation.js';
+import { RepositoryOperationConflictError } from './repository-operation.js';
 
 export interface HealthGateway {
   verify(): Promise<HydraHealthStatus>;
@@ -25,6 +27,13 @@ export interface SetupOptions {
   readonly repositoryPath: string | undefined;
   readonly statusGateway: RepositoryStatusGateway | undefined;
   readonly source?: 'example' | 'configured';
+  readonly operationGateway?: RepositoryOperationGateway;
+}
+
+export interface RepositoryOperationGateway {
+  snapshot(): RepositoryOperationSnapshot;
+  index(): Promise<unknown>;
+  synchronize(): Promise<unknown>;
 }
 
 export interface ConsoleGateway {
@@ -72,7 +81,7 @@ const setupResponseSchema = {
   properties: {
     status: { type: 'string', const: 'ready' },
     hydra: { type: 'string', enum: ['connected', 'unavailable'] },
-    startupCommand: { type: 'string', const: 'docker compose up --build --wait' },
+    startupCommand: { type: 'string', minLength: 1 },
     repository: {
       type: 'object',
       additionalProperties: false,
@@ -84,6 +93,9 @@ const setupResponseSchema = {
             'not_configured',
             'misconfigured',
             'not_indexed',
+            'indexing',
+            'syncing',
+            'invalid_repository',
             'indexed',
             'context_unavailable',
           ],
@@ -469,20 +481,57 @@ export function buildApp(options: AppOptions): FastifyInstance {
       schema: { response: { 200: setupResponseSchema } },
     },
     async () => {
-      const hydraPromise = options.healthGateway
-        .verify()
-        .then(() => 'connected' as const)
-        .catch(() => 'unavailable' as const);
-      const repositoryPromise = readRepositorySetup(options.setup);
-      const [hydra, repository] = await Promise.all([hydraPromise, repositoryPromise]);
-      return {
-        status: 'ready' as const,
-        hydra,
-        startupCommand: 'docker compose up --build --wait' as const,
-        repository,
-      };
+      return readSetup(options);
     },
   );
+
+  for (const [path, operation] of [
+    ['/api/repositories/index', 'index'],
+    ['/api/repositories/sync', 'sync'],
+  ] as const) {
+    app.post(
+      path,
+      {
+        schema: {
+          response: {
+            200: setupResponseSchema,
+            409: unavailableResponseSchema,
+            422: unavailableResponseSchema,
+            503: unavailableResponseSchema,
+          },
+        },
+      },
+      async (_request, reply) => {
+        const gateway = options.setup?.operationGateway;
+        if (!gateway || options.setup?.source !== 'configured') {
+          return reply.status(409).send({
+            status: 'unavailable',
+            message: 'Manual repository operations require a configured local repository.',
+          });
+        }
+        try {
+          await (operation === 'index' ? gateway.index() : gateway.synchronize());
+          return await readSetup(options);
+        } catch (error) {
+          app.log.warn({ error, operation }, 'Configured repository operation failed');
+          if (error instanceof RepositoryOperationConflictError) {
+            return reply.status(409).send({
+              status: 'unavailable',
+              message: 'Another repository operation is already in progress.',
+            });
+          }
+          const snapshot = gateway.snapshot();
+          return reply.status(422).send({
+            status: 'unavailable',
+            message:
+              snapshot.state === 'invalid_repository'
+                ? snapshot.message
+                : 'FreshContext could not verify the configured repository operation.',
+          });
+        }
+      },
+    );
+  }
 
   app.get(
     '/api/evaluation/latest',
@@ -527,11 +576,56 @@ export function buildApp(options: AppOptions): FastifyInstance {
         response: {
           400: unavailableResponseSchema,
           404: unavailableResponseSchema,
+          409: unavailableResponseSchema,
+          422: unavailableResponseSchema,
           503: unavailableResponseSchema,
         },
       },
     },
     async (request, reply) => {
+      const operation = options.setup?.operationGateway?.snapshot();
+      if (operation?.state === 'indexing' || operation?.state === 'syncing') {
+        return reply.status(409).send({
+          status: 'unavailable',
+          message: `The configured repository is ${operation.state}.`,
+        });
+      }
+      if (operation?.state === 'invalid_repository') {
+        return reply.status(422).send({
+          status: 'unavailable',
+          message: operation.message,
+        });
+      }
+      if (
+        options.setup?.source === 'configured' &&
+        options.setup.repositoryId &&
+        options.setup.statusGateway
+      ) {
+        let status: RepositoryStatus;
+        try {
+          status = await options.setup.statusGateway.status({
+            repositoryId: options.setup.repositoryId,
+          });
+        } catch (error) {
+          app.log.warn({ error }, 'Configured repository status read failed');
+          return reply.status(503).send({
+            status: 'unavailable',
+            message: 'HydraDB could not verify the configured repository state.',
+          });
+        }
+        if (status.status === 'context_unavailable') {
+          return reply.status(503).send({
+            status: 'unavailable',
+            message: 'HydraDB could not verify the configured repository state.',
+          });
+        }
+        if (!status.indexed) {
+          return reply.status(409).send({
+            status: 'unavailable',
+            message: 'The configured repository is waiting for its first completed index.',
+          });
+        }
+      }
       if (!options.consoleGateway) {
         return reply.status(503).send({
           status: 'unavailable',
@@ -623,6 +717,24 @@ export function buildApp(options: AppOptions): FastifyInstance {
   return app;
 }
 
+async function readSetup(options: AppOptions) {
+  const hydraPromise = options.healthGateway
+    .verify()
+    .then(() => 'connected' as const)
+    .catch(() => 'unavailable' as const);
+  const repositoryPromise = readRepositorySetup(options.setup);
+  const [hydra, repository] = await Promise.all([hydraPromise, repositoryPromise]);
+  return {
+    status: 'ready' as const,
+    hydra,
+    startupCommand:
+      options.setup?.source === 'configured'
+        ? 'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait'
+        : 'docker compose up --build --wait',
+    repository,
+  };
+}
+
 async function readRepositorySetup(options: SetupOptions | undefined) {
   const repositoryId = normalizedEnvironmentValue(options?.repositoryId);
   const repositoryPath = normalizedEnvironmentValue(options?.repositoryPath);
@@ -646,6 +758,29 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
       null,
       null,
       'Repository id, repository path, and the status gateway must be configured together.',
+    );
+  }
+  const operation = options.operationGateway?.snapshot();
+  if (operation?.state === 'indexing' || operation?.state === 'syncing') {
+    return repositorySetup(
+      operation.state,
+      options.source ?? 'configured',
+      repositoryId,
+      repositoryPath,
+      null,
+      null,
+      `FreshContext is ${operation.state} the configured repository through the real Git and HydraDB path.`,
+    );
+  }
+  if (operation?.state === 'invalid_repository') {
+    return repositorySetup(
+      'invalid_repository',
+      options.source ?? 'configured',
+      repositoryId,
+      repositoryPath,
+      null,
+      null,
+      operation.message,
     );
   }
   let status: RepositoryStatus;
@@ -696,7 +831,15 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
 }
 
 function repositorySetup(
-  state: 'not_configured' | 'misconfigured' | 'not_indexed' | 'indexed' | 'context_unavailable',
+  state:
+    | 'not_configured'
+    | 'misconfigured'
+    | 'not_indexed'
+    | 'indexing'
+    | 'syncing'
+    | 'invalid_repository'
+    | 'indexed'
+    | 'context_unavailable',
   source: 'example' | 'configured' | null,
   id: string | null,
   path: string | null,

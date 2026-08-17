@@ -9,6 +9,7 @@ import { buildApp } from './app.js';
 import { ProductConsoleGateway } from './console.js';
 import { FileEvaluationGateway } from './evaluation.js';
 import { bootstrapExample } from './example.js';
+import { RepositoryOperationCoordinator } from './repository-operation.js';
 
 const environment = process.env;
 const port = positiveInteger(environment['PORT'], 3_000, 'PORT');
@@ -54,6 +55,15 @@ const consoleGateway =
         statusGateway,
       })
     : undefined;
+const operationGateway =
+  !exampleMode && repositoryId && repositoryPath
+    ? new RepositoryOperationCoordinator({
+        repositoryId,
+        repositoryPath,
+        graph,
+        hydra,
+      })
+    : undefined;
 const app = buildApp({
   healthGateway: healthProbe,
   evaluationGateway: new FileEvaluationGateway(evaluationReference),
@@ -65,6 +75,7 @@ const app = buildApp({
     repositoryPath,
     source: exampleMode ? 'example' : 'configured',
     statusGateway,
+    ...(operationGateway ? { operationGateway } : {}),
   },
 });
 

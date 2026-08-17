@@ -1,7 +1,22 @@
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export type RepositorySetupState =
-  'not_configured' | 'misconfigured' | 'not_indexed' | 'indexed' | 'context_unavailable';
+  | 'not_configured'
+  | 'misconfigured'
+  | 'not_indexed'
+  | 'indexing'
+  | 'syncing'
+  | 'invalid_repository'
+  | 'indexed'
+  | 'context_unavailable';
 
 export interface SetupResponse {
   readonly status: 'ready';
@@ -26,6 +41,8 @@ type SetupResource =
 interface SetupContextValue {
   readonly resource: SetupResource;
   readonly refresh: () => void;
+  readonly indexRepository: () => Promise<void>;
+  readonly synchronizeRepository: () => Promise<void>;
 }
 
 const SetupContext = createContext<SetupContextValue | null>(null);
@@ -69,13 +86,67 @@ export function SetupProvider({ children }: { readonly children: ReactNode }) {
     return () => controller.abort();
   }, [requestVersion]);
 
-  const value = useMemo<SetupContextValue>(
-    () => ({
-      resource,
-      refresh: () => setRequestVersion((current) => current + 1),
-    }),
+  const refresh = useCallback(() => setRequestVersion((current) => current + 1), []);
+  const runRepositoryOperation = useCallback(
+    async (
+      path: '/api/repositories/index' | '/api/repositories/sync',
+      activeState: 'indexing' | 'syncing',
+    ): Promise<void> => {
+      if (resource.state !== 'ready') return;
+      setResource({
+        state: 'ready',
+        data: {
+          ...resource.data,
+          repository: {
+            ...resource.data.repository,
+            state: activeState,
+            message: `FreshContext is ${activeState} the configured repository through Git and HydraDB.`,
+          },
+        },
+        message: 'Repository operation in progress.',
+      });
+      try {
+        const response = await fetch(path, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+          const data = parseSetupResponse(await response.json());
+          setResource({ state: 'ready', data, message: 'Repository state verified.' });
+          return;
+        }
+        const setupResponse = await fetch('/api/setup', {
+          headers: { Accept: 'application/json' },
+        });
+        if (!setupResponse.ok) throw new Error(`Setup request failed with ${setupResponse.status}`);
+        const data = parseSetupResponse(await setupResponse.json());
+        setResource({ state: 'ready', data, message: 'Repository operation failed safely.' });
+      } catch (error) {
+        setResource({
+          state: 'error',
+          data: null,
+          message:
+            error instanceof Error
+              ? `Repository operation is unavailable: ${error.message}`
+              : 'Repository operation is unavailable.',
+        });
+      }
+    },
     [resource],
   );
+  const indexRepository = useCallback(
+    () => runRepositoryOperation('/api/repositories/index', 'indexing'),
+    [runRepositoryOperation],
+  );
+  const synchronizeRepository = useCallback(
+    () => runRepositoryOperation('/api/repositories/sync', 'syncing'),
+    [runRepositoryOperation],
+  );
+  const value = useMemo<SetupContextValue>(
+    () => ({ resource, refresh, indexRepository, synchronizeRepository }),
+    [indexRepository, refresh, resource, synchronizeRepository],
+  );
+
   return <SetupContext value={value}>{children}</SetupContext>;
 }
 
@@ -125,6 +196,9 @@ function isRepositoryState(value: unknown): value is RepositorySetupState {
     value === 'not_configured' ||
     value === 'misconfigured' ||
     value === 'not_indexed' ||
+    value === 'indexing' ||
+    value === 'syncing' ||
+    value === 'invalid_repository' ||
     value === 'indexed' ||
     value === 'context_unavailable'
   );

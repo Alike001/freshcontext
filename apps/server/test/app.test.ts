@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProductConsoleResponse } from '../src/console.js';
 import { buildApp } from '../src/app.js';
 import { FileEvaluationGateway } from '../src/evaluation.js';
+import { RepositoryOperationConflictError } from '../src/repository-operation.js';
 
 const evaluationReference = resolve(
   import.meta.dirname,
@@ -182,6 +183,7 @@ describe('FreshContext HTTP service', () => {
       setup: {
         repositoryId: 'checkout',
         repositoryPath: '/workspace/checkout',
+        source: 'configured',
         statusGateway: {
           status: () =>
             Promise.resolve({
@@ -198,6 +200,8 @@ describe('FreshContext HTTP service', () => {
 
     expect(response.json()).toMatchObject({
       hydra: 'connected',
+      startupCommand:
+        'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait',
       repository: {
         state: 'indexed',
         id: 'checkout',
@@ -269,6 +273,139 @@ describe('FreshContext HTTP service', () => {
       },
     });
     expect(response.body).not.toContain('internal details');
+    await app.close();
+  });
+
+  it('indexes the configured repository through the product API and returns verified state', async () => {
+    let indexed = false;
+    let indexCalls = 0;
+    const app = buildApp({
+      healthGateway: readyHealth(),
+      setup: {
+        repositoryId: 'checkout',
+        repositoryPath: '/workspace/checkout',
+        source: 'configured',
+        statusGateway: {
+          status: () =>
+            Promise.resolve({
+              status: 'ready',
+              indexed,
+              indexedCommit: indexed ? 'a'.repeat(40) : null,
+              statistics: indexed ? { indexedFileCount: 2 } : null,
+            }),
+        },
+        operationGateway: {
+          snapshot: () => ({ state: 'idle' }),
+          index: () => {
+            indexCalls += 1;
+            indexed = true;
+            return Promise.resolve();
+          },
+          synchronize: () => Promise.resolve(),
+        },
+      },
+    });
+
+    const before = await app.inject({ method: 'GET', url: '/api/setup' });
+    const response = await app.inject({ method: 'POST', url: '/api/repositories/index' });
+
+    expect(before.json()).toMatchObject({ repository: { state: 'not_indexed' } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      repository: {
+        state: 'indexed',
+        source: 'configured',
+        indexedCommit: 'a'.repeat(40),
+        statistics: { indexedFileCount: 2 },
+      },
+    });
+    expect(indexCalls).toBe(1);
+    await app.close();
+  });
+
+  it('reports active and failed repository operations without exposing internal errors', async () => {
+    let state = { state: 'indexing' as const } as
+      | { readonly state: 'indexing' }
+      | {
+          readonly state: 'invalid_repository';
+          readonly code: string;
+          readonly message: string;
+        };
+    const app = buildApp({
+      healthGateway: readyHealth(),
+      setup: {
+        repositoryId: 'checkout',
+        repositoryPath: '/workspace/checkout',
+        source: 'configured',
+        statusGateway: {
+          status: () => Promise.reject(new Error('must not run during an operation')),
+        },
+        operationGateway: {
+          snapshot: () => state,
+          index: () => Promise.resolve(),
+          synchronize: () => Promise.resolve(),
+        },
+      },
+      consoleGateway: {
+        read: () => Promise.resolve(exampleConsoleResponse()),
+        review: () => Promise.resolve(exampleConsoleResponse()),
+      },
+    });
+
+    const indexingSetup = await app.inject({ method: 'GET', url: '/api/setup' });
+    const indexingConsole = await app.inject({ method: 'GET', url: '/api/console' });
+    state = {
+      state: 'invalid_repository',
+      code: 'DIRTY_WORKTREE',
+      message: 'Repository must have a clean worktree.',
+    };
+    const invalidSetup = await app.inject({ method: 'GET', url: '/api/setup' });
+    const invalidConsole = await app.inject({ method: 'GET', url: '/api/console' });
+
+    expect(indexingSetup.json()).toMatchObject({ repository: { state: 'indexing' } });
+    expect(indexingConsole.statusCode).toBe(409);
+    expect(invalidSetup.json()).toMatchObject({
+      repository: {
+        state: 'invalid_repository',
+        message: 'Repository must have a clean worktree.',
+      },
+    });
+    expect(invalidConsole.statusCode).toBe(422);
+    expect(invalidConsole.body).not.toContain('must not run');
+    await app.close();
+  });
+
+  it('rejects overlapping repository operations and fails Console status reads closed', async () => {
+    const statusGateway = {
+      status: () => Promise.reject(new Error('private query detail')),
+    };
+    const app = buildApp({
+      healthGateway: readyHealth(),
+      setup: {
+        repositoryId: 'checkout',
+        repositoryPath: '/workspace/checkout',
+        source: 'configured',
+        statusGateway,
+        operationGateway: {
+          snapshot: () => ({ state: 'idle' }),
+          index: () =>
+            Promise.reject(new RepositoryOperationConflictError('private conflict detail')),
+          synchronize: () => Promise.resolve(),
+        },
+      },
+      consoleGateway: {
+        read: () => Promise.resolve(exampleConsoleResponse()),
+        review: () => Promise.resolve(exampleConsoleResponse()),
+      },
+    });
+
+    const operation = await app.inject({ method: 'POST', url: '/api/repositories/index' });
+    const consoleResponse = await app.inject({ method: 'GET', url: '/api/console' });
+
+    expect(operation.statusCode).toBe(409);
+    expect(operation.body).not.toContain('private conflict');
+    expect(consoleResponse.statusCode).toBe(503);
+    expect(consoleResponse.body).not.toContain('private query');
     await app.close();
   });
 
@@ -390,5 +527,16 @@ function exampleConsoleResponse(): ProductConsoleResponse {
       original: null,
       diff: null,
     },
+  };
+}
+
+function readyHealth() {
+  return {
+    verify: () =>
+      Promise.resolve({
+        ready: true as const,
+        hydra: 'connected' as const,
+        roundTrip: { queryId: 'ready-health', readEpoch: 1 },
+      }),
   };
 }
