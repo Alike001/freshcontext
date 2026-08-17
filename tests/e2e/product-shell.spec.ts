@@ -36,17 +36,33 @@ test('overview enters the real setup flow without browser errors', async ({ page
 
   await page.getByRole('link', { name: 'Proof Console', exact: true }).click();
   await expect(page).toHaveURL(/\/console$/u);
-  await expect(
-    page.getByRole('heading', { name: 'Connect a real repository first.' }),
-  ).toBeVisible();
+  await page.getByRole('button', { name: /Checkout totals add a flat \$2 service fee/u }).click();
+  await expect(page.getByRole('heading', { name: 'Why this claim was withheld' })).toBeVisible();
+  await expect(page.getByText('Example data', { exact: true }).first()).toBeVisible();
+  await expect(page.getByLabel('Ordered HydraDB evidence path')).toContainText('calculateTotal');
+  await expect(page.getByLabel('Code change')).toContainText('return amount > 100 ? 4 : 1;');
+  await page.screenshot({
+    path: `/tmp/freshcontext-${testInfo.project.name}-console.png`,
+    fullPage: true,
+  });
 
-  await page.getByRole('link', { name: 'Open Setup' }).click();
+  if (testInfo.project.name === 'desktop-chromium') {
+    const reviewButton = page.getByRole('button', { name: 'Supersede claim' });
+    if (await reviewButton.isVisible()) {
+      await reviewButton.click();
+      await expect(page.getByText('Supersession verified', { exact: true })).toBeVisible();
+      await expect(page.getByText('The replacement is current.')).toBeVisible();
+    }
+  }
+
+  await page.getByRole('link', { name: 'Setup', exact: true }).click();
   await expect(page).toHaveURL(/\/setup$/u);
   await expect(
     page.getByRole('heading', { name: 'Local runtime, clearly accounted for.' }),
   ).toBeVisible();
   await expect(page.getByText('Connected and verified', { exact: true })).toBeVisible();
-  await expect(page.getByText('Not configured', { exact: true })).toBeVisible();
+  await expect(page.getByText('Indexed', { exact: true })).toBeVisible();
+  await expect(page.getByText('Example data, processed through the real stack')).toBeVisible();
 
   const screenshotName = `/tmp/freshcontext-${testInfo.project.name}-setup.png`;
   await page.screenshot({ path: screenshotName, fullPage: true });
@@ -89,4 +105,13 @@ test('evaluation failure stays explicit and shows no benchmark numbers', async (
   await expect(page.getByRole('alert')).toContainText('Evaluation proof unavailable');
   await expect(page.getByText('100.0%', { exact: true })).toHaveCount(0);
   await expect(page.getByText('60.0%', { exact: true })).toHaveCount(0);
+});
+
+test('Proof Console failure stays explicit and shows no cached claim', async ({ page }) => {
+  await page.route('**/api/console*', (route) => route.abort('failed'));
+  await page.goto('/console');
+
+  await expect(page.getByRole('alert')).toContainText('Proof Console unavailable');
+  await expect(page.getByRole('alert')).toContainText('No cached claim was shown');
+  await expect(page.getByLabel('Ordered HydraDB evidence path')).toHaveCount(0);
 });

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import type { ProductConsoleResponse } from '../src/console.js';
 import { buildApp } from '../src/app.js';
 import { FileEvaluationGateway } from '../src/evaluation.js';
 
@@ -96,6 +97,7 @@ describe('FreshContext HTTP service', () => {
       startupCommand: 'docker compose up --build --wait',
       repository: {
         state: 'not_configured',
+        source: null,
         id: null,
         path: null,
         indexedCommit: null,
@@ -103,6 +105,67 @@ describe('FreshContext HTTP service', () => {
         message: 'No repository is configured. FreshContext will not invent repository activity.',
       },
     });
+    await app.close();
+  });
+
+  it('serves the real console gateway and forwards a validated review request', async () => {
+    const consoleResponse = exampleConsoleResponse();
+    const reviews: Array<{ memoryId: string; replacementClaim: string }> = [];
+    const app = buildApp({
+      healthGateway: {
+        verify: () =>
+          Promise.resolve({
+            ready: true,
+            hydra: 'connected',
+            roundTrip: { queryId: 'x', readEpoch: 1 },
+          }),
+      },
+      consoleGateway: {
+        read: () => Promise.resolve(consoleResponse),
+        review: (memoryId, replacementClaim) => {
+          reviews.push({ memoryId, replacementClaim });
+          return Promise.resolve(consoleResponse);
+        },
+      },
+    });
+
+    const read = await app.inject({ method: 'GET', url: '/api/console' });
+    const review = await app.inject({
+      method: 'POST',
+      url: '/api/memories/memory-1/review',
+      payload: { replacementClaim: 'The verified replacement.' },
+    });
+
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toMatchObject({ status: 'ready', source: 'example' });
+    expect(review.statusCode).toBe(200);
+    expect(reviews).toEqual([
+      { memoryId: 'memory-1', replacementClaim: 'The verified replacement.' },
+    ]);
+    await app.close();
+  });
+
+  it('rejects extra review fields before calling the domain gateway', async () => {
+    let calls = 0;
+    const app = buildApp({
+      healthGateway: { verify: () => Promise.reject(new Error('unused')) },
+      consoleGateway: {
+        read: () => Promise.resolve(exampleConsoleResponse()),
+        review: () => {
+          calls += 1;
+          return Promise.resolve(exampleConsoleResponse());
+        },
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memories/memory-1/review',
+      payload: { replacementClaim: 'Replacement', state: 'current' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(calls).toBe(0);
     await app.close();
   });
 
@@ -297,3 +360,30 @@ describe('FreshContext HTTP service', () => {
     }
   });
 });
+
+function exampleConsoleResponse(): ProductConsoleResponse {
+  const memory = {
+    memoryId: 'memory-1',
+    claim: 'A claim',
+    state: 'needs_review' as const,
+    sourceCommit: 'a'.repeat(40),
+    createdAt: '2026-08-12T09:00:00.000Z',
+    evidence: [{ path: 'src/a.ts', qualifiedName: 'a' }],
+  };
+  return {
+    status: 'ready',
+    source: 'example',
+    repositoryId: 'example',
+    repositoryLabel: 'Checkout example',
+    selectedCommit: 'b'.repeat(40),
+    memories: [memory],
+    selected: {
+      memory,
+      impact: null,
+      chronology: [],
+      replacement: null,
+      original: null,
+      diff: null,
+    },
+  };
+}

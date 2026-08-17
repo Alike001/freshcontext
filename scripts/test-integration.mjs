@@ -24,8 +24,43 @@ try {
   assert(setupResponse.status === 200, 'Expected the setup read model to be available');
   assert(setupBody.hydra === 'connected', 'Expected setup to verify HydraDB');
   assert(
-    setupBody.repository?.state === 'not_configured',
-    'Expected setup to report the real unconfigured repository state',
+    setupBody.repository?.state === 'indexed' && setupBody.repository?.source === 'example',
+    'Expected setup to report the real indexed example repository',
+  );
+
+  const consoleResponse = await fetch(`http://127.0.0.1:${port}/api/console`);
+  const consoleBody = await consoleResponse.json();
+  assert(consoleResponse.status === 200, 'Expected the Proof Console read model to be available');
+  assert(consoleBody.source === 'example', 'Expected the Proof Console to label example data');
+  assert(
+    consoleBody.selected?.memory?.state === 'needs_review' &&
+      consoleBody.selected?.impact?.callHops === 2 &&
+      consoleBody.selected?.impact?.steps?.length === 4,
+    'Expected a real two-hop HydraDB impact proof',
+  );
+  assert(
+    typeof consoleBody.selected?.diff === 'string' &&
+      consoleBody.selected.diff.includes('return amount > 100 ? 4 : 1;'),
+    'Expected the proof dossier to include the verified Git diff',
+  );
+
+  const memoryId = consoleBody.selected.memory.memoryId;
+  const reviewResponse = await fetch(
+    `http://127.0.0.1:${port}/api/memories/${encodeURIComponent(memoryId)}/review`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        replacementClaim: 'Checkout totals use the tiered service fee through calculateTotal.',
+      }),
+    },
+  );
+  const reviewBody = await reviewResponse.json();
+  assert(reviewResponse.status === 200, 'Expected the review workflow to complete');
+  assert(
+    reviewBody.selected?.memory?.state === 'superseded' &&
+      reviewBody.selected?.replacement?.state === 'current',
+    'Expected immutable supersession with a current replacement',
   );
 
   const evaluationResponse = await fetch(`http://127.0.0.1:${port}/api/evaluation/latest`);
@@ -65,7 +100,7 @@ try {
   assert(unavailableBody.hydra === 'unavailable', 'Expected HydraDB to fail closed');
 
   console.log(
-    'Integration proof passed: product shell, HydraDB health, graph, indexer, MCP memory, evaluation, and fail-closed behavior.',
+    'Integration proof passed: product shell, real example, Proof Console review, HydraDB, graph, indexer, MCP memory, evaluation, and fail-closed behavior.',
   );
 } catch (error) {
   testFailed = true;

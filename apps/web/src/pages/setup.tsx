@@ -89,6 +89,16 @@ function SetupReady({ data }: { readonly data: import('../data/setup.js').SetupR
         <dd>{formatRepositoryState(data.repository.state)}</dd>
       </div>
       <div>
+        <dt>Data source</dt>
+        <dd>
+          {data.repository.source === 'example'
+            ? 'Example data, processed through the real stack'
+            : data.repository.source === 'configured'
+              ? 'Configured local repository'
+              : 'None selected'}
+        </dd>
+      </div>
+      <div>
         <dt>Repository id</dt>
         <dd>{data.repository.id ?? 'None selected'}</dd>
       </div>

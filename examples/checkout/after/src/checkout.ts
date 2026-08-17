@@ -1,0 +1,11 @@
+import { calculateTotal } from './pricing.js';
+
+export class Checkout {
+  public total(amount: number): number {
+    return calculateTotal(amount);
+  }
+
+  public dynamic(pricer: (amount: number) => number, amount: number): number {
+    return pricer(amount);
+  }
+}

@@ -28,7 +28,27 @@ try {
   });
   await page.waitForTimeout(1_200);
 
-  await page.getByRole('link', { name: 'View evaluation' }).click();
+  await page.getByRole('link', { name: 'Proof Console', exact: true }).click();
+  await page.getByRole('button', { name: /Checkout totals add a flat \$2 service fee/u }).click();
+  await page.getByRole('heading', { name: 'Why this claim was withheld' }).waitFor();
+  await page.getByLabel('Code change').waitFor();
+  await page.waitForTimeout(1_200);
+  await page.screenshot({
+    path: resolve(screenshotDirectory, 'proof-console.png'),
+    fullPage: true,
+  });
+  const reviewButton = page.getByRole('button', { name: 'Supersede claim' });
+  if (await reviewButton.isVisible()) {
+    await reviewButton.click();
+    await page.getByText('Supersession verified', { exact: true }).waitFor();
+  }
+  await page.waitForTimeout(1_000);
+  await page.screenshot({
+    path: resolve(screenshotDirectory, 'review-complete.png'),
+    fullPage: true,
+  });
+
+  await page.getByRole('link', { name: 'Evaluation', exact: true }).click();
   await page.getByText('Verified offline reference', { exact: true }).waitFor();
   await page.getByText('100.0%', { exact: true }).first().waitFor();
   await page.waitForTimeout(1_000);
@@ -62,4 +82,4 @@ await rm(videoTarget, { force: true });
 await rename(generatedVideo, videoTarget);
 
 process.stdout.write(`Demo screenshots written to ${screenshotDirectory}\n`);
-process.stdout.write(`Offline evaluation video written to ${videoTarget}\n`);
+process.stdout.write(`Offline product proof video written to ${videoTarget}\n`);

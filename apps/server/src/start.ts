@@ -1,12 +1,14 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { MemoryService } from '@freshcontext/core';
+import { ConsoleService, MemoryService, ReviewService } from '@freshcontext/core';
 import { ImmutableGraphStore } from '@freshcontext/graph';
 import { HydraClient, HydraHealthProbe, loadHydraConfig, waitForHydra } from '@freshcontext/hydra';
 
 import { buildApp } from './app.js';
+import { ProductConsoleGateway } from './console.js';
 import { FileEvaluationGateway } from './evaluation.js';
+import { bootstrapExample } from './example.js';
 
 const environment = process.env;
 const port = positiveInteger(environment['PORT'], 3_000, 'PORT');
@@ -20,17 +22,49 @@ const startupTimeoutMs = positiveInteger(
 const hydra = new HydraClient(loadHydraConfig(environment));
 await waitForHydra(hydra, { timeoutMs: startupTimeoutMs });
 const healthProbe = await HydraHealthProbe.initialize(hydra);
+const graph = new ImmutableGraphStore(hydra);
+const statusGateway = new MemoryService({ graph, hydra });
+const repositoryId = environment['FRESHCONTEXT_REPOSITORY_ID'];
+const repositoryPath = environment['FRESHCONTEXT_REPOSITORY_PATH'];
+const exampleMode = environment['FRESHCONTEXT_EXAMPLE_MODE'] === '1';
+if (exampleMode) {
+  if (!repositoryId || !repositoryPath) {
+    throw new Error(
+      'Example mode requires FRESHCONTEXT_REPOSITORY_ID and FRESHCONTEXT_REPOSITORY_PATH.',
+    );
+  }
+  await bootstrapExample({
+    repositoryId,
+    repositoryPath,
+    sourceRoot: resolve(import.meta.dirname, '../examples/checkout'),
+    graph,
+    hydra,
+  });
+}
 const staticRoot = resolve(import.meta.dirname, '../public');
 const evaluationReference = resolve(import.meta.dirname, '../evaluation/reference-result.json');
+const consoleGateway =
+  repositoryId && repositoryPath
+    ? new ProductConsoleGateway({
+        repositoryId,
+        repositoryPath,
+        source: exampleMode ? 'example' : 'configured',
+        console: new ConsoleService(hydra),
+        review: new ReviewService({ graph, hydra, memory: statusGateway }),
+        statusGateway,
+      })
+    : undefined;
 const app = buildApp({
   healthGateway: healthProbe,
   evaluationGateway: new FileEvaluationGateway(evaluationReference),
   logger: true,
   ...(existsSync(staticRoot) ? { staticRoot } : {}),
+  ...(consoleGateway ? { consoleGateway } : {}),
   setup: {
-    repositoryId: environment['FRESHCONTEXT_REPOSITORY_ID'],
-    repositoryPath: environment['FRESHCONTEXT_REPOSITORY_PATH'],
-    statusGateway: new MemoryService({ graph: new ImmutableGraphStore(hydra), hydra }),
+    repositoryId,
+    repositoryPath,
+    source: exampleMode ? 'example' : 'configured',
+    statusGateway,
   },
 });
 

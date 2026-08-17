@@ -1,4 +1,6 @@
 export * from './errors.js';
+export * from './console-service.js';
+export * from './console-types.js';
 export * from './memory-service.js';
 export * from './payload.js';
 export * from './queries.js';

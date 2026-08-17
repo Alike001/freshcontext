@@ -18,6 +18,7 @@
     "@freshcontext/core": "workspace:*",
     "@freshcontext/graph": "workspace:*",
     "@freshcontext/hydra": "workspace:*",
+    "@freshcontext/indexer": "workspace:*",
     "fastify": "5.12.0"
   }
 }

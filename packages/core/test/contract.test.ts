@@ -11,6 +11,7 @@ import { deterministicIntegerId, entityKeys, ImmutableGraphStore } from '@freshc
 import { HydraClient, loadHydraConfig, type HydraQueryResponse } from '@freshcontext/hydra';
 import { indexRepository } from '@freshcontext/indexer';
 
+import { ConsoleService } from '../src/console-service.js';
 import { MemoryService } from '../src/memory-service.js';
 import {
   INSPECT_MEMORY_IMPACTS_QUERY,
@@ -127,6 +128,29 @@ export function calculateTotal(amount: number): number {
     expect(await impactCallHops(hydra, repositoryId, removed.memoryId)).toEqual([0]);
     expect(await impactCallHops(hydra, repositoryId, unrelated.memoryId)).toEqual([]);
 
+    const proofConsole = await new ConsoleService(hydra).read({
+      repositoryId,
+      selectedCommit: toCommit,
+      memoryId: transitive.memoryId,
+    });
+    expect(proofConsole.selected).toMatchObject({
+      memory: { memoryId: transitive.memoryId, state: 'needs_review' },
+      impact: {
+        callHops: 2,
+        change: { symbolKey: 'src/pricing.ts::fee', changeKind: 'changed' },
+        steps: [
+          { position: 0, qualifiedName: 'fee' },
+          { position: 1, qualifiedName: 'calculateTotal' },
+          { position: 2, qualifiedName: 'Checkout.total' },
+          { position: 3, memoryId: transitive.memoryId },
+        ],
+      },
+      chronology: [
+        { eventType: 'created', state: 'current' },
+        { eventType: 'invalidated', state: 'needs_review' },
+      ],
+    });
+
     const duplicate = await new SyncService({
       graph: new ImmutableGraphStore(hydra),
       hydra,
@@ -207,6 +231,15 @@ export function calculateTotal(amount: number): number {
       abstained: false,
     });
     expect(await supersessionCount(hydra, repositoryId, transitive.memoryId)).toBe(1);
+    const reviewedConsole = await new ConsoleService(hydra).read({
+      repositoryId,
+      selectedCommit: toCommit,
+      memoryId: transitive.memoryId,
+    });
+    expect(reviewedConsole.selected).toMatchObject({
+      memory: { memoryId: transitive.memoryId, state: 'superseded' },
+      replacement: { memoryId: reviewed.replacement.memoryId, state: 'current' },
+    });
     const repeatedReview = await new ReviewService({
       graph: new ImmutableGraphStore(hydra),
       hydra,

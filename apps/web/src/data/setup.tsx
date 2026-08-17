@@ -9,6 +9,7 @@ export interface SetupResponse {
   readonly startupCommand: string;
   readonly repository: {
     readonly state: RepositorySetupState;
+    readonly source: 'example' | 'configured' | null;
     readonly id: string | null;
     readonly path: string | null;
     readonly indexedCommit: string | null;
@@ -104,6 +105,7 @@ export function parseSetupResponse(value: unknown): SetupResponse {
     startupCommand,
     repository: {
       state,
+      source: repositorySource(repository['source']),
       id: nullableString(repository['id']),
       path: nullableString(repository['path']),
       indexedCommit: nullableString(repository['indexedCommit']),
@@ -111,6 +113,11 @@ export function parseSetupResponse(value: unknown): SetupResponse {
       message: requiredString(repository['message']),
     },
   };
+}
+
+function repositorySource(value: unknown): 'example' | 'configured' | null {
+  if (value === null || value === 'example' || value === 'configured') return value;
+  throw new Error('Invalid repository source');
 }
 
 function isRepositoryState(value: unknown): value is RepositorySetupState {

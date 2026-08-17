@@ -1,6 +1,14 @@
 name: freshcontext
 
 services:
+  example-init:
+    image: node:24.14.1-alpine
+    user: '0:0'
+    command: ['chown', '-R', '1000:1000', '/data/example']
+    restart: 'no'
+    volumes:
+      - example-data:/data/example
+
   hydra-init:
     image: node:24.14.1-alpine
     user: '0:0'
@@ -38,6 +46,8 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
+      example-init:
+        condition: service_completed_successfully
       hydra:
         condition: service_started
       hydra-init:
@@ -54,10 +64,14 @@ services:
       HYDRA_AUTH_TOKEN_FILE: /run/hydra/auth-token
       HYDRA_REQUEST_TIMEOUT_MS: '2000'
       HYDRA_STARTUP_TIMEOUT_MS: '120000'
+      FRESHCONTEXT_REPOSITORY_ID: freshcontext-checkout-example
+      FRESHCONTEXT_REPOSITORY_PATH: /data/example/checkout
+      FRESHCONTEXT_EXAMPLE_MODE: '1'
     ports:
       - '127.0.0.1:${FRESHCONTEXT_PORT:-3000}:3000'
     volumes:
       - hydra-data:/run/hydra:ro
+      - example-data:/data/example
     healthcheck:
       test:
         [
@@ -241,3 +255,4 @@ services:
 
 volumes:
   hydra-data:
+  example-data:

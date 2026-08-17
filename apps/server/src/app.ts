@@ -1,8 +1,10 @@
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 
+import { MemoryDomainError } from '@freshcontext/core';
 import type { HydraHealthStatus } from '@freshcontext/hydra';
 
+import type { ProductConsoleResponse } from './console.js';
 import type { EvaluationGateway } from './evaluation.js';
 
 export interface HealthGateway {
@@ -15,12 +17,19 @@ export interface AppOptions {
   readonly staticRoot?: string;
   readonly setup?: SetupOptions;
   readonly evaluationGateway?: EvaluationGateway;
+  readonly consoleGateway?: ConsoleGateway;
 }
 
 export interface SetupOptions {
   readonly repositoryId: string | undefined;
   readonly repositoryPath: string | undefined;
   readonly statusGateway: RepositoryStatusGateway | undefined;
+  readonly source?: 'example' | 'configured';
+}
+
+export interface ConsoleGateway {
+  read(memoryId?: string): Promise<ProductConsoleResponse>;
+  review(memoryId: string, replacementClaim: string): Promise<ProductConsoleResponse>;
 }
 
 export interface RepositoryStatusGateway {
@@ -67,7 +76,7 @@ const setupResponseSchema = {
     repository: {
       type: 'object',
       additionalProperties: false,
-      required: ['state', 'id', 'path', 'indexedCommit', 'statistics', 'message'],
+      required: ['state', 'source', 'id', 'path', 'indexedCommit', 'statistics', 'message'],
       properties: {
         state: {
           type: 'string',
@@ -78,6 +87,9 @@ const setupResponseSchema = {
             'indexed',
             'context_unavailable',
           ],
+        },
+        source: {
+          anyOf: [{ type: 'string', enum: ['example', 'configured'] }, { type: 'null' }],
         },
         id: { anyOf: [{ type: 'string' }, { type: 'null' }] },
         path: { anyOf: [{ type: 'string' }, { type: 'null' }] },
@@ -258,7 +270,24 @@ const unavailableResponseSchema = {
 } as const;
 
 export function buildApp(options: AppOptions): FastifyInstance {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger ?? false,
+    ajv: { customOptions: { removeAdditional: false } },
+  });
+
+  app.setErrorHandler((error, _request, reply) => {
+    if (typeof error === 'object' && error !== null && 'validation' in error) {
+      return reply.status(400).send({
+        status: 'unavailable',
+        message: 'The request did not match the accepted input shape.',
+      });
+    }
+    app.log.error({ error }, 'Unhandled FreshContext request failure');
+    return reply.status(500).send({
+      status: 'unavailable',
+      message: 'FreshContext could not complete the request.',
+    });
+  });
 
   app.addHook('onSend', async (_request, reply) => {
     void reply.header(
@@ -399,6 +428,113 @@ export function buildApp(options: AppOptions): FastifyInstance {
     },
   );
 
+  app.get<{ Querystring: { memoryId?: string } }>(
+    '/api/console',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            memoryId: { type: 'string', minLength: 1, maxLength: 200 },
+          },
+        },
+        response: {
+          400: unavailableResponseSchema,
+          404: unavailableResponseSchema,
+          503: unavailableResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!options.consoleGateway) {
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'The Proof Console is unavailable until a repository is configured.',
+        });
+      }
+      try {
+        return await options.consoleGateway.read(request.query.memoryId);
+      } catch (error) {
+        app.log.warn({ error }, 'Proof Console read failed');
+        if (error instanceof MemoryDomainError && error.code === 'INVALID_INPUT') {
+          return reply
+            .status(400)
+            .send({ status: 'unavailable', message: 'The memory id is invalid.' });
+        }
+        if (error instanceof MemoryDomainError && error.code === 'EVIDENCE_NOT_FOUND') {
+          return reply
+            .status(404)
+            .send({ status: 'unavailable', message: 'The requested memory does not exist.' });
+        }
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'FreshContext could not verify the Proof Console state.',
+        });
+      }
+    },
+  );
+
+  app.post<{
+    Params: { memoryId: string };
+    Body: { replacementClaim: string };
+  }>(
+    '/api/memories/:memoryId/review',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['memoryId'],
+          properties: { memoryId: { type: 'string', minLength: 1, maxLength: 200 } },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['replacementClaim'],
+          properties: {
+            replacementClaim: { type: 'string', minLength: 1, maxLength: 2000 },
+          },
+        },
+        response: {
+          400: unavailableResponseSchema,
+          409: unavailableResponseSchema,
+          503: unavailableResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!options.consoleGateway) {
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'The review workflow is unavailable until a repository is configured.',
+        });
+      }
+      try {
+        return await options.consoleGateway.review(
+          request.params.memoryId,
+          request.body.replacementClaim,
+        );
+      } catch (error) {
+        app.log.warn({ error }, 'Memory review failed');
+        if (error instanceof MemoryDomainError && error.code === 'INVALID_INPUT') {
+          return reply
+            .status(400)
+            .send({ status: 'unavailable', message: 'The replacement claim is invalid.' });
+        }
+        if (error instanceof MemoryDomainError && error.code === 'MEMORY_NOT_RETRYABLE') {
+          return reply
+            .status(409)
+            .send({ status: 'unavailable', message: 'This memory no longer needs review.' });
+        }
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'FreshContext could not complete the review safely.',
+        });
+      }
+    },
+  );
+
   return app;
 }
 
@@ -412,12 +548,14 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
       null,
       null,
       null,
+      null,
       'No repository is configured. FreshContext will not invent repository activity.',
     );
   }
   if (!repositoryId || !repositoryPath || !options?.statusGateway) {
     return repositorySetup(
       'misconfigured',
+      options?.source ?? null,
       repositoryId,
       repositoryPath,
       null,
@@ -431,6 +569,7 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
   } catch {
     return repositorySetup(
       'context_unavailable',
+      options.source ?? 'configured',
       repositoryId,
       repositoryPath,
       null,
@@ -441,6 +580,7 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
   if (status.status === 'context_unavailable') {
     return repositorySetup(
       'context_unavailable',
+      options.source ?? 'configured',
       repositoryId,
       repositoryPath,
       null,
@@ -451,6 +591,7 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
   if (!status.indexed) {
     return repositorySetup(
       'not_indexed',
+      options.source ?? 'configured',
       repositoryId,
       repositoryPath,
       null,
@@ -460,6 +601,7 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
   }
   return repositorySetup(
     'indexed',
+    options.source ?? 'configured',
     repositoryId,
     repositoryPath,
     status.indexedCommit,
@@ -470,13 +612,14 @@ async function readRepositorySetup(options: SetupOptions | undefined) {
 
 function repositorySetup(
   state: 'not_configured' | 'misconfigured' | 'not_indexed' | 'indexed' | 'context_unavailable',
+  source: 'example' | 'configured' | null,
   id: string | null,
   path: string | null,
   indexedCommit: string | null,
   statistics: Readonly<Record<string, number>> | null,
   message: string,
 ) {
-  return { state, id, path, indexedCommit, statistics, message };
+  return { state, source, id, path, indexedCommit, statistics, message };
 }
 
 function normalizedEnvironmentValue(value: string | undefined): string | null {

@@ -8,6 +8,7 @@ const setupResponse = {
   startupCommand: 'docker compose up --build --wait',
   repository: {
     state: 'indexed',
+    source: 'example',
     id: 'checkout',
     path: '/workspace/checkout',
     indexedCommit: 'a'.repeat(40),

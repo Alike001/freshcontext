@@ -71,6 +71,9 @@ importers:
       '@freshcontext/hydra':
         specifier: workspace:*
         version: link:../../packages/hydra
+      '@freshcontext/indexer':
+        specifier: workspace:*
+        version: link:../../packages/indexer
       fastify:
         specifier: 5.12.0
         version: 5.12.0

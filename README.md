@@ -23,6 +23,11 @@ baseline. The interface labels example data and reports unavailable or unconfigu
 of inventing repository activity. Its Evaluation route reads a strictly validated, versioned result
 from the same pinned-Hydra command so the proof remains available offline.
 
+The default startup also materializes a labelled checkout example as a real two-commit Git
+repository. FreshContext indexes its baseline, stores evidence-bound claims, synchronizes its fee
+change, and renders the resulting HydraDB impact path and Git diff in the Proof Console. Judges can
+complete an immutable review and supersession without configuring another repository first.
+
 ## Run it
 
 Prerequisites: Docker Engine with Docker Compose v2.
@@ -33,9 +38,10 @@ docker compose up --build --wait
 
 Then open <http://localhost:3000>. The landing page, Proof Console, Evaluation, and Setup routes are
 served from the same production container. Setup reports the live HydraDB round trip and repository
-state. You can inspect the raw readiness response at <http://localhost:3000/api/health>. A ready
-response means FreshContext completed a real authenticated write-read round trip through HydraDB.
-The generated credential stays in a Docker volume and is never returned by the API.
+state, including the labelled example source. You can inspect the raw readiness response at
+<http://localhost:3000/api/health>. A ready response means FreshContext completed a real
+authenticated write-read round trip through HydraDB. The generated credential stays in a Docker
+volume and is never returned by the API.
 
 Stop the local stack with:
 
@@ -44,7 +50,7 @@ docker compose down
 ```
 
 Use `docker compose down --volumes` only when you intentionally want to delete the local HydraDB
-data and generated token.
+data, generated example repository, and token.
 
 ## Local quality checks
 
@@ -58,12 +64,12 @@ pnpm test:integration
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
 the immutable graph, real Git indexer, and MCP stdio contracts against the pinned engine, verifies
-retry and overwrite behavior, checks the production web shell and setup read model, interrupts and
-resumes a real impact sync, stops HydraDB to prove that health fails closed, and removes only that
-isolated project's containers and volume.
+retry and overwrite behavior, checks the production web shell, runs the example Proof Console and
+review path, interrupts and resumes a real impact sync, stops HydraDB to prove that health fails
+closed, and removes only that isolated project's containers and volume.
 
-The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, live
-HydraDB state, honest repository-empty behavior, and the unavailable-service path:
+The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, the
+live impact dossier, immutable review, and unavailable-service paths:
 
 ```bash
 pnpm exec playwright install chromium
