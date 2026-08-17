@@ -33,6 +33,7 @@ COPY packages/indexer packages/indexer
 RUN pnpm build
 RUN pnpm --filter @freshcontext/server deploy --prod /prod/freshcontext
 RUN cp -R /app/apps/web/dist /prod/freshcontext/public
+RUN mkdir -p /prod/freshcontext/evaluation && cp /app/evaluation/reference-result.json /prod/freshcontext/evaluation/reference-result.json
 RUN pnpm --filter @freshcontext/mcp deploy --prod /prod/mcp
 
 FROM node:24.14.1-alpine AS mcp-runtime

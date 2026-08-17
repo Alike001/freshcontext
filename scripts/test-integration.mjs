@@ -28,6 +28,23 @@ try {
     'Expected setup to report the real unconfigured repository state',
   );
 
+  const evaluationResponse = await fetch(`http://127.0.0.1:${port}/api/evaluation/latest`);
+  const evaluationBody = await evaluationResponse.json();
+  assert(evaluationResponse.status === 200, 'Expected the evaluation read model to be available');
+  assert(
+    evaluationBody.source === 'verified_reference',
+    'Expected the offline result to identify its verified-reference source',
+  );
+  assert(
+    evaluationBody.aggregate?.graph?.precision === 1 &&
+      evaluationBody.aggregate?.graph?.falseNegatives === 1,
+    'Expected the checked pinned-Hydra graph metrics',
+  );
+  assert(
+    evaluationBody.aggregate?.directFileBaseline?.precision === 0.6,
+    'Expected the checked direct-file baseline',
+  );
+
   const productResponse = await fetch(`http://127.0.0.1:${port}/setup`);
   const productHtml = await productResponse.text();
   assert(productResponse.status === 200, 'Expected a direct product route to serve the SPA');

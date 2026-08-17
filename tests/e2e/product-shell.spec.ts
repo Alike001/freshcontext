@@ -19,7 +19,22 @@ test('overview enters the real setup flow without browser errors', async ({ page
     fullPage: false,
   });
 
-  await page.getByRole('link', { name: 'Open Proof Console' }).click();
+  await page.getByRole('link', { name: 'View evaluation' }).click();
+  await expect(page).toHaveURL(/\/evaluation$/u);
+  await expect(page.getByRole('heading', { name: 'A graph should earn its place.' })).toBeVisible();
+  await expect(page.getByText('Verified offline reference', { exact: true })).toBeVisible();
+  const precisionRow = page.getByRole('row').filter({ hasText: 'Precision' });
+  await expect(precisionRow.getByText('100.0%', { exact: true })).toBeVisible();
+  await expect(precisionRow.getByText('60.0%', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('One expected impact remains missed beyond the V1 boundary.'),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `/tmp/freshcontext-${testInfo.project.name}-evaluation.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole('link', { name: 'Proof Console', exact: true }).click();
   await expect(page).toHaveURL(/\/console$/u);
   await expect(
     page.getByRole('heading', { name: 'Connect a real repository first.' }),
@@ -65,4 +80,13 @@ test('mobile layout does not overflow and names a failed local service', async (
   const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(contentWidth).toBeLessThanOrEqual(viewportWidth);
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+});
+
+test('evaluation failure stays explicit and shows no benchmark numbers', async ({ page }) => {
+  await page.route('**/api/evaluation/latest', (route) => route.abort('failed'));
+  await page.goto('/evaluation');
+
+  await expect(page.getByRole('alert')).toContainText('Evaluation proof unavailable');
+  await expect(page.getByText('100.0%', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('60.0%', { exact: true })).toHaveCount(0);
 });

@@ -6,6 +6,7 @@ import { ImmutableGraphStore } from '@freshcontext/graph';
 import { HydraClient, HydraHealthProbe, loadHydraConfig, waitForHydra } from '@freshcontext/hydra';
 
 import { buildApp } from './app.js';
+import { FileEvaluationGateway } from './evaluation.js';
 
 const environment = process.env;
 const port = positiveInteger(environment['PORT'], 3_000, 'PORT');
@@ -20,8 +21,10 @@ const hydra = new HydraClient(loadHydraConfig(environment));
 await waitForHydra(hydra, { timeoutMs: startupTimeoutMs });
 const healthProbe = await HydraHealthProbe.initialize(hydra);
 const staticRoot = resolve(import.meta.dirname, '../public');
+const evaluationReference = resolve(import.meta.dirname, '../evaluation/reference-result.json');
 const app = buildApp({
   healthGateway: healthProbe,
+  evaluationGateway: new FileEvaluationGateway(evaluationReference),
   logger: true,
   ...(existsSync(staticRoot) ? { staticRoot } : {}),
   setup: {

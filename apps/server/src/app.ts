@@ -3,6 +3,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { HydraHealthStatus } from '@freshcontext/hydra';
 
+import type { EvaluationGateway } from './evaluation.js';
+
 export interface HealthGateway {
   verify(): Promise<HydraHealthStatus>;
 }
@@ -12,6 +14,7 @@ export interface AppOptions {
   readonly logger?: boolean;
   readonly staticRoot?: string;
   readonly setup?: SetupOptions;
+  readonly evaluationGateway?: EvaluationGateway;
 }
 
 export interface SetupOptions {
@@ -85,6 +88,172 @@ const setupResponseSchema = {
         message: { type: 'string' },
       },
     },
+  },
+} as const;
+
+const evaluationMetricsSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'truePositives',
+    'trueNegatives',
+    'falsePositives',
+    'falseNegatives',
+    'precision',
+    'recall',
+    'falsePositiveIds',
+    'falseNegativeIds',
+  ],
+  properties: {
+    truePositives: { type: 'integer', minimum: 0 },
+    trueNegatives: { type: 'integer', minimum: 0 },
+    falsePositives: { type: 'integer', minimum: 0 },
+    falseNegatives: { type: 'integer', minimum: 0 },
+    precision: { anyOf: [{ type: 'number', minimum: 0, maximum: 1 }, { type: 'null' }] },
+    recall: { anyOf: [{ type: 'number', minimum: 0, maximum: 1 }, { type: 'null' }] },
+    falsePositiveIds: { type: 'array', items: { type: 'string' } },
+    falseNegativeIds: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+const evaluationEvidenceSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['path', 'qualifiedName'],
+  properties: { path: { type: 'string' }, qualifiedName: { type: 'string' } },
+} as const;
+
+const evaluationClassificationSchema = {
+  type: 'string',
+  enum: ['true_positive', 'true_negative', 'false_positive', 'false_negative'],
+} as const;
+
+const evaluationResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'status',
+    'source',
+    'evaluationId',
+    'completedAt',
+    'command',
+    'engine',
+    'traversalBoundary',
+    'dataset',
+    'cases',
+    'aggregate',
+  ],
+  properties: {
+    status: { type: 'string', const: 'ready' },
+    source: { type: 'string', const: 'verified_reference' },
+    evaluationId: { type: 'string' },
+    completedAt: { type: 'string' },
+    command: { type: 'string', const: 'pnpm evaluate' },
+    engine: { type: 'string', const: 'HydraDB OSS v0.1.1' },
+    traversalBoundary: { type: 'string', const: 'zero to three reverse call hops' },
+    dataset: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['status', 'source', 'caseCount', 'labelCount'],
+      properties: {
+        status: { type: 'string', const: 'complete' },
+        source: { type: 'string', const: 'versioned real Git fixtures' },
+        caseCount: { type: 'integer', minimum: 0 },
+        labelCount: { type: 'integer', minimum: 0 },
+      },
+    },
+    cases: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'caseId',
+          'description',
+          'changeSummary',
+          'labelCount',
+          'changedSymbolCount',
+          'unresolvedCallCount',
+          'labels',
+          'graph',
+          'directFileBaseline',
+        ],
+        properties: {
+          caseId: { type: 'string' },
+          description: { type: 'string' },
+          changeSummary: { type: 'string' },
+          labelCount: { type: 'integer', minimum: 0 },
+          changedSymbolCount: { type: 'integer', minimum: 0 },
+          unresolvedCallCount: { type: 'integer', minimum: 0 },
+          labels: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: [
+                'id',
+                'claim',
+                'evidence',
+                'expectedAffected',
+                'graph',
+                'directFileBaseline',
+              ],
+              properties: {
+                id: { type: 'string' },
+                claim: { type: 'string' },
+                evidence: evaluationEvidenceSchema,
+                expectedAffected: { type: 'boolean' },
+                graph: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['affected', 'classification', 'callHops', 'actualPath'],
+                  properties: {
+                    affected: { type: 'boolean' },
+                    classification: evaluationClassificationSchema,
+                    callHops: {
+                      anyOf: [{ type: 'integer', minimum: 0, maximum: 3 }, { type: 'null' }],
+                    },
+                    actualPath: {
+                      anyOf: [{ type: 'array', items: evaluationEvidenceSchema }, { type: 'null' }],
+                    },
+                  },
+                },
+                directFileBaseline: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['affected', 'classification'],
+                  properties: {
+                    affected: { type: 'boolean' },
+                    classification: evaluationClassificationSchema,
+                  },
+                },
+              },
+            },
+          },
+          graph: evaluationMetricsSchema,
+          directFileBaseline: evaluationMetricsSchema,
+        },
+      },
+    },
+    aggregate: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['graph', 'directFileBaseline'],
+      properties: {
+        graph: evaluationMetricsSchema,
+        directFileBaseline: evaluationMetricsSchema,
+      },
+    },
+  },
+} as const;
+
+const unavailableResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['status', 'message'],
+  properties: {
+    status: { type: 'string', const: 'unavailable' },
+    message: { type: 'string' },
   },
 } as const;
 
@@ -198,6 +367,35 @@ export function buildApp(options: AppOptions): FastifyInstance {
         startupCommand: 'docker compose up --build --wait' as const,
         repository,
       };
+    },
+  );
+
+  app.get(
+    '/api/evaluation/latest',
+    {
+      schema: {
+        response: {
+          200: evaluationResponseSchema,
+          503: unavailableResponseSchema,
+        },
+      },
+    },
+    async (_request, reply) => {
+      if (!options.evaluationGateway) {
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'The verified evaluation artifact is unavailable.',
+        });
+      }
+      try {
+        return await options.evaluationGateway.read();
+      } catch (error) {
+        app.log.warn({ error }, 'Evaluation artifact verification failed');
+        return reply.status(503).send({
+          status: 'unavailable',
+          message: 'The verified evaluation artifact is unavailable.',
+        });
+      }
     },
   );
 

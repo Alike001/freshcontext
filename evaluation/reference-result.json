@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 1,
+  "command": "pnpm evaluate",
+  "engine": "HydraDB OSS v0.1.1",
+  "traversalBoundary": "zero to three reverse call hops",
+  "dataset": {
+    "status": "complete",
+    "source": "versioned real Git fixtures",
+    "caseCount": 2,
+    "labelCount": 10
+  },
+  "cases": [
+    {
+      "caseId": "policy-depth",
+      "description": "An authorization policy changes below increasingly distant callers.",
+      "changeSummary": "Tighten isAllowed without touching any guard or entry-point file.",
+      "beforeCommit": "feb85c093d073b71111ce5bbcb4a998ad613c9a8",
+      "afterCommit": "85131fb45989eaa9425c5af38b1650561d943ac7",
+      "labelCount": 6,
+      "changedSymbolCount": 1,
+      "unresolvedCallCount": 0,
+      "labels": [
+        {
+          "id": "direct-policy",
+          "claim": "isAllowed enforces the active role policy",
+          "evidence": {
+            "path": "src/policy.ts",
+            "qualifiedName": "isAllowed"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "isAllowed"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 0,
+            "actualPath": [
+              {
+                "path": "src/policy.ts",
+                "qualifiedName": "isAllowed"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "true_positive"
+          }
+        },
+        {
+          "id": "two-hop-guard",
+          "claim": "authorize reflects the active role policy through makeDecision",
+          "evidence": {
+            "path": "src/guards.ts",
+            "qualifiedName": "authorize"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "isAllowed"
+            },
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "makeDecision"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorize"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 2,
+            "actualPath": [
+              {
+                "path": "src/policy.ts",
+                "qualifiedName": "isAllowed"
+              },
+              {
+                "path": "src/policy.ts",
+                "qualifiedName": "makeDecision"
+              },
+              {
+                "path": "src/guards.ts",
+                "qualifiedName": "authorize"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "three-hop-api",
+          "claim": "authorizeApi reflects the active role policy through the guard chain",
+          "evidence": {
+            "path": "src/guards.ts",
+            "qualifiedName": "authorizeApi"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "isAllowed"
+            },
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "makeDecision"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorize"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorizeApi"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 3,
+            "actualPath": [
+              {
+                "path": "src/policy.ts",
+                "qualifiedName": "isAllowed"
+              },
+              {
+                "path": "src/policy.ts",
+                "qualifiedName": "makeDecision"
+              },
+              {
+                "path": "src/guards.ts",
+                "qualifiedName": "authorize"
+              },
+              {
+                "path": "src/guards.ts",
+                "qualifiedName": "authorizeApi"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "beyond-boundary",
+          "claim": "authorizeBatch reflects the active role policy through the full guard chain",
+          "evidence": {
+            "path": "src/guards.ts",
+            "qualifiedName": "authorizeBatch"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "isAllowed"
+            },
+            {
+              "path": "src/policy.ts",
+              "qualifiedName": "makeDecision"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorize"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorizeApi"
+            },
+            {
+              "path": "src/guards.ts",
+              "qualifiedName": "authorizeBatch"
+            }
+          ],
+          "graph": {
+            "affected": false,
+            "classification": "false_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "same-file-unrelated",
+          "claim": "policyLabel returns the stable policy label",
+          "evidence": {
+            "path": "src/policy.ts",
+            "qualifiedName": "policyLabel"
+          },
+          "expectedAffected": false,
+          "expectedPath": null,
+          "graph": {
+            "affected": false,
+            "classification": "true_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "false_positive"
+          }
+        },
+        {
+          "id": "separate-unrelated",
+          "claim": "stableGuard remains independent of the role policy",
+          "evidence": {
+            "path": "src/guards.ts",
+            "qualifiedName": "stableGuard"
+          },
+          "expectedAffected": false,
+          "expectedPath": null,
+          "graph": {
+            "affected": false,
+            "classification": "true_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "true_negative"
+          }
+        }
+      ],
+      "graph": {
+        "truePositives": 3,
+        "trueNegatives": 2,
+        "falsePositives": 0,
+        "falseNegatives": 1,
+        "precision": 1,
+        "recall": 0.75,
+        "falsePositiveIds": [],
+        "falseNegativeIds": ["policy-depth:beyond-boundary"]
+      },
+      "directFileBaseline": {
+        "truePositives": 1,
+        "trueNegatives": 1,
+        "falsePositives": 1,
+        "falseNegatives": 3,
+        "precision": 0.5,
+        "recall": 0.25,
+        "falsePositiveIds": ["policy-depth:same-file-unrelated"],
+        "falseNegativeIds": [
+          "policy-depth:beyond-boundary",
+          "policy-depth:three-hop-api",
+          "policy-depth:two-hop-guard"
+        ]
+      }
+    },
+    {
+      "caseId": "pricing-propagation",
+      "description": "A pricing rule changes underneath checkout behavior and one formatter is removed.",
+      "changeSummary": "Change fee thresholds and remove formatTotal without touching checkout.ts.",
+      "beforeCommit": "932b4b617139240065e3904b0c15d24827ded811",
+      "afterCommit": "2e5a4bf95eef8c8b2c03e1c01abbdb667f67fab4",
+      "labelCount": 4,
+      "changedSymbolCount": 2,
+      "unresolvedCallCount": 0,
+      "labels": [
+        {
+          "id": "direct-fee",
+          "claim": "fee applies the current pricing threshold",
+          "evidence": {
+            "path": "src/pricing.ts",
+            "qualifiedName": "fee"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/pricing.ts",
+              "qualifiedName": "fee"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 0,
+            "actualPath": [
+              {
+                "path": "src/pricing.ts",
+                "qualifiedName": "fee"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "true_positive"
+          }
+        },
+        {
+          "id": "transitive-checkout",
+          "claim": "Checkout total includes the fee through calculateTotal",
+          "evidence": {
+            "path": "src/checkout.ts",
+            "qualifiedName": "Checkout.total"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/pricing.ts",
+              "qualifiedName": "fee"
+            },
+            {
+              "path": "src/pricing.ts",
+              "qualifiedName": "calculateTotal"
+            },
+            {
+              "path": "src/checkout.ts",
+              "qualifiedName": "Checkout.total"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 2,
+            "actualPath": [
+              {
+                "path": "src/pricing.ts",
+                "qualifiedName": "fee"
+              },
+              {
+                "path": "src/pricing.ts",
+                "qualifiedName": "calculateTotal"
+              },
+              {
+                "path": "src/checkout.ts",
+                "qualifiedName": "Checkout.total"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "removed-formatter",
+          "claim": "formatTotal returns the calculated amount as text",
+          "evidence": {
+            "path": "src/pricing.ts",
+            "qualifiedName": "formatTotal"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "src/pricing.ts",
+              "qualifiedName": "formatTotal"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 0,
+            "actualPath": [
+              {
+                "path": "src/pricing.ts",
+                "qualifiedName": "formatTotal"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "true_positive"
+          }
+        },
+        {
+          "id": "same-file-unrelated",
+          "claim": "unrelatedLabel returns the stable pricing label",
+          "evidence": {
+            "path": "src/pricing.ts",
+            "qualifiedName": "unrelatedLabel"
+          },
+          "expectedAffected": false,
+          "expectedPath": null,
+          "graph": {
+            "affected": false,
+            "classification": "true_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "false_positive"
+          }
+        }
+      ],
+      "graph": {
+        "truePositives": 3,
+        "trueNegatives": 1,
+        "falsePositives": 0,
+        "falseNegatives": 0,
+        "precision": 1,
+        "recall": 1,
+        "falsePositiveIds": [],
+        "falseNegativeIds": []
+      },
+      "directFileBaseline": {
+        "truePositives": 2,
+        "trueNegatives": 0,
+        "falsePositives": 1,
+        "falseNegatives": 1,
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "falsePositiveIds": ["pricing-propagation:same-file-unrelated"],
+        "falseNegativeIds": ["pricing-propagation:transitive-checkout"]
+      }
+    }
+  ],
+  "aggregate": {
+    "graph": {
+      "truePositives": 6,
+      "trueNegatives": 3,
+      "falsePositives": 0,
+      "falseNegatives": 1,
+      "precision": 1,
+      "recall": 0.8571428571428571,
+      "falsePositiveIds": [],
+      "falseNegativeIds": ["policy-depth:beyond-boundary"]
+    },
+    "directFileBaseline": {
+      "truePositives": 3,
+      "trueNegatives": 1,
+      "falsePositives": 2,
+      "falseNegatives": 4,
+      "precision": 0.6,
+      "recall": 0.42857142857142855,
+      "falsePositiveIds": [
+        "policy-depth:same-file-unrelated",
+        "pricing-propagation:same-file-unrelated"
+      ],
+      "falseNegativeIds": [
+        "policy-depth:beyond-boundary",
+        "policy-depth:three-hop-api",
+        "policy-depth:two-hop-guard",
+        "pricing-propagation:transitive-checkout"
+      ]
+    }
+  },
+  "evaluationId": "2fd14725009b9b93",
+  "completedAt": "2026-08-16T21:23:05.480Z"
+}

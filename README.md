@@ -20,7 +20,8 @@ agent context. A resumable review operation preserves the old claim, validates c
 links a replacement through `SUPERSEDES`, and activates only the reviewed version. The reproducible
 evaluation runs real committed TypeScript changes and compares graph traversal with a direct-file
 baseline. The interface labels example data and reports unavailable or unconfigured states instead
-of inventing repository activity.
+of inventing repository activity. Its Evaluation route reads a strictly validated, versioned result
+from the same pinned-Hydra command so the proof remains available offline.
 
 ## Run it
 
@@ -82,6 +83,12 @@ unrelated, two-hop, three-hop, and intentionally out-of-bound four-hop cases. Re
 full confusion matrix, precision, recall, false-positive ids, false-negative ids, and the same
 metrics for a direct-file baseline. The four-hop miss is kept visible because V1 deliberately stops
 at three reverse call hops.
+
+The `/evaluation` route serves `evaluation/reference-result.json`, a checked-in output from that
+exact command and dataset. The interface labels it `Verified offline reference`. A missing, corrupt,
+or internally inconsistent artifact fails visibly and shows no scores. Regenerating the local
+artifact never writes into the product HydraDB volume, and the write is atomic so readers don't see
+partial JSON.
 
 ## Agent tool contract
 

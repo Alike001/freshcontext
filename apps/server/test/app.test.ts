@@ -5,6 +5,12 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildApp } from '../src/app.js';
+import { FileEvaluationGateway } from '../src/evaluation.js';
+
+const evaluationReference = resolve(
+  import.meta.dirname,
+  '../../../evaluation/reference-result.json',
+);
 
 describe('FreshContext HTTP service', () => {
   it('returns a live HydraDB round-trip result when ready', async () => {
@@ -200,6 +206,61 @@ describe('FreshContext HTTP service', () => {
       },
     });
     expect(response.body).not.toContain('internal details');
+    await app.close();
+  });
+
+  it('serves the validated offline evaluation reference without invented metrics', async () => {
+    const app = buildApp({
+      healthGateway: {
+        verify: () =>
+          Promise.resolve({
+            ready: true,
+            hydra: 'connected',
+            roundTrip: { queryId: 'evaluation-health', readEpoch: 20 },
+          }),
+      },
+      evaluationGateway: new FileEvaluationGateway(evaluationReference),
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/api/evaluation/latest' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'ready',
+      source: 'verified_reference',
+      evaluationId: '2fd14725009b9b93',
+      dataset: { caseCount: 2, labelCount: 10 },
+      aggregate: {
+        graph: { precision: 1, recall: 6 / 7 },
+        directFileBaseline: { precision: 0.6, recall: 3 / 7 },
+      },
+    });
+    await app.close();
+  });
+
+  it('fails evaluation closed without leaking an artifact read error', async () => {
+    const app = buildApp({
+      healthGateway: {
+        verify: () =>
+          Promise.resolve({
+            ready: true,
+            hydra: 'connected',
+            roundTrip: { queryId: 'evaluation-error', readEpoch: 21 },
+          }),
+      },
+      evaluationGateway: {
+        read: () => Promise.reject(new Error('private artifact path and parse detail')),
+      },
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/api/evaluation/latest' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      status: 'unavailable',
+      message: 'The verified evaluation artifact is unavailable.',
+    });
+    expect(response.body).not.toContain('private artifact');
     await app.close();
   });
 

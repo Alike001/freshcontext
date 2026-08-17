@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import { HydraClient, loadHydraConfig } from '@freshcontext/hydra';
@@ -10,7 +10,17 @@ const outputPath = resolve(
   process.env['FRESHCONTEXT_EVALUATION_OUTPUT'] ?? '.freshcontext/evaluation/latest.json',
 );
 await mkdir(dirname(outputPath), { recursive: true });
-await writeFile(outputPath, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8');
+const temporaryPath = `${outputPath}.${process.pid}.tmp`;
+try {
+  await writeFile(temporaryPath, `${JSON.stringify(artifact, null, 2)}\n`, {
+    encoding: 'utf8',
+    flag: 'wx',
+  });
+  await rename(temporaryPath, outputPath);
+} catch (error) {
+  await rm(temporaryPath, { force: true });
+  throw error;
+}
 process.stdout.write(`Evaluation ${artifact.evaluationId} written to ${outputPath}\n`);
 process.stdout.write(
   `Graph precision ${formatScore(artifact.aggregate.graph.precision)}, recall ${formatScore(artifact.aggregate.graph.recall)}\n`,

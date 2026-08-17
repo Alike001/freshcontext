@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm --recursive build",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm security:scan",
+    "demo:capture": "node scripts/capture-demo.mjs",
     "dev:server": "pnpm --filter @freshcontext/server dev",
     "dev:web": "pnpm --filter @freshcontext/web dev",
     "evaluate": "node scripts/run-evaluation.mjs",

@@ -6,6 +6,8 @@ node_modules
 **/dist
 coverage
 design
+demo
+docs
 research
 
 .env
