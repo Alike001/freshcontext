@@ -72,12 +72,19 @@ try {
   );
   assert(
     evaluationBody.aggregate?.graph?.precision === 1 &&
+      evaluationBody.aggregate?.graph?.recall === 10 / 11 &&
       evaluationBody.aggregate?.graph?.falseNegatives === 1,
     'Expected the checked pinned-Hydra graph metrics',
   );
   assert(
-    evaluationBody.aggregate?.directFileBaseline?.precision === 0.6,
+    evaluationBody.aggregate?.directFileBaseline?.precision === 0.625,
     'Expected the checked direct-file baseline',
+  );
+  assert(
+    evaluationBody.mcpReceipt?.beforeChange?.abstained === false &&
+      evaluationBody.mcpReceipt?.afterChange?.abstained === true &&
+      evaluationBody.mcpReceipt?.afterChange?.abstentionReason === 'all_matching_memory_unsafe',
+    'Expected the checked MCP recall and abstention receipt',
   );
 
   const productResponse = await fetch(`http://127.0.0.1:${port}/setup`);

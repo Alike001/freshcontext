@@ -19,6 +19,43 @@ export interface EvaluationEvidence {
 export type EvaluationClassification =
   'true_positive' | 'true_negative' | 'false_positive' | 'false_negative';
 
+export interface PublicRepositoryProvenanceReadModel {
+  readonly kind: 'public_repository';
+  readonly repository: string;
+  readonly url: string;
+  readonly beforeCommit: string;
+  readonly afterCommit: string;
+  readonly license: string;
+  readonly sourcePaths: readonly string[];
+}
+
+export interface EvaluationMcpRecallReadModel {
+  readonly status: 'ready';
+  readonly indexedCommit: string;
+  readonly returnedMemoryIds: readonly string[];
+  readonly withheldMemoryIds: readonly string[];
+  readonly abstained: boolean;
+  readonly abstentionReason: 'no_memory' | 'all_matching_memory_unsafe' | null;
+}
+
+export interface EvaluationMcpReceiptReadModel {
+  readonly caseId: string;
+  readonly client: '@modelcontextprotocol/sdk Client';
+  readonly transport: 'linked in-process MCP transport';
+  readonly tool: 'freshcontext_recall';
+  readonly registeredTools: readonly string[];
+  readonly input: {
+    readonly repositoryId: string;
+    readonly path: string;
+    readonly qualifiedName: string;
+    readonly beforeCommit: string;
+    readonly afterCommit: string;
+  };
+  readonly memoryId: string;
+  readonly beforeChange: EvaluationMcpRecallReadModel;
+  readonly afterChange: EvaluationMcpRecallReadModel;
+}
+
 export interface EvaluationLabelReadModel {
   readonly id: string;
   readonly claim: string;
@@ -40,6 +77,9 @@ export interface EvaluationCaseReadModel {
   readonly caseId: string;
   readonly description: string;
   readonly changeSummary: string;
+  readonly provenance: PublicRepositoryProvenanceReadModel | null;
+  readonly beforeCommit: string;
+  readonly afterCommit: string;
   readonly labelCount: number;
   readonly changedSymbolCount: number;
   readonly unresolvedCallCount: number;
@@ -63,6 +103,7 @@ export interface EvaluationReadModel {
     readonly labelCount: number;
   };
   readonly cases: readonly EvaluationCaseReadModel[];
+  readonly mcpReceipt: EvaluationMcpReceiptReadModel;
   readonly aggregate: {
     readonly graph: EvaluationMetrics;
     readonly directFileBaseline: EvaluationMetrics;
@@ -109,6 +150,7 @@ export function parseEvaluationArtifact(value: unknown): EvaluationReadModel {
   if (dataset.labelCount !== cases.reduce((sum, entry) => sum + entry.labelCount, 0)) {
     throw new Error('Evaluation label count does not match its cases');
   }
+  const mcpReceipt = parseMcpReceipt(artifact['mcpReceipt'], cases);
 
   const aggregateRecord = requiredRecord(artifact['aggregate'], 'evaluation aggregate');
   const aggregate = {
@@ -132,6 +174,7 @@ export function parseEvaluationArtifact(value: unknown): EvaluationReadModel {
     traversalBoundary: 'zero to three reverse call hops',
     dataset,
     cases,
+    mcpReceipt,
     aggregate,
   };
 }
@@ -147,6 +190,9 @@ function parseEvaluationCase(value: unknown): EvaluationCaseReadModel {
     caseId,
     description: requiredBoundedString(entry, 'description', 1_000),
     changeSummary: requiredBoundedString(entry, 'changeSummary', 1_000),
+    provenance: parsePublicProvenance(entry['provenance']),
+    beforeCommit: requiredGitSha(entry, 'beforeCommit'),
+    afterCommit: requiredGitSha(entry, 'afterCommit'),
     labelCount,
     changedSymbolCount: requiredCount(entry, 'changedSymbolCount'),
     unresolvedCallCount: requiredCount(entry, 'unresolvedCallCount'),
@@ -161,6 +207,103 @@ function parseEvaluationCase(value: unknown): EvaluationCaseReadModel {
   assertMetricsMatchLabels(result.graph, [result], 'graph');
   assertMetricsMatchLabels(result.directFileBaseline, [result], 'directFileBaseline');
   return result;
+}
+
+function parsePublicProvenance(value: unknown): PublicRepositoryProvenanceReadModel | null {
+  if (value === null) return null;
+  const provenance = requiredRecord(value, 'public repository provenance');
+  requiredLiteral(provenance, 'kind', 'public_repository');
+  const result = {
+    kind: 'public_repository' as const,
+    repository: requiredBoundedString(provenance, 'repository', 300),
+    url: requiredBoundedString(provenance, 'url', 1_000),
+    beforeCommit: requiredGitSha(provenance, 'beforeCommit'),
+    afterCommit: requiredGitSha(provenance, 'afterCommit'),
+    license: requiredBoundedString(provenance, 'license', 300),
+    sourcePaths: stringArray(provenance['sourcePaths'], 'provenance source paths'),
+  };
+  if (!result.url.startsWith('https://github.com/') || result.sourcePaths.length === 0) {
+    throw new Error('Evaluation public repository provenance is invalid');
+  }
+  return result;
+}
+
+function parseMcpReceipt(
+  value: unknown,
+  cases: readonly EvaluationCaseReadModel[],
+): EvaluationMcpReceiptReadModel {
+  const receipt = requiredRecord(value, 'MCP receipt');
+  requiredLiteral(receipt, 'client', '@modelcontextprotocol/sdk Client');
+  requiredLiteral(receipt, 'transport', 'linked in-process MCP transport');
+  requiredLiteral(receipt, 'tool', 'freshcontext_recall');
+  const input = requiredRecord(receipt['input'], 'MCP receipt input');
+  const result = {
+    caseId: requiredBoundedString(receipt, 'caseId', 128),
+    client: '@modelcontextprotocol/sdk Client' as const,
+    transport: 'linked in-process MCP transport' as const,
+    tool: 'freshcontext_recall' as const,
+    registeredTools: stringArray(receipt['registeredTools'], 'MCP registered tools'),
+    input: {
+      repositoryId: requiredBoundedString(input, 'repositoryId', 200),
+      path: requiredBoundedString(input, 'path', 1_000),
+      qualifiedName: requiredBoundedString(input, 'qualifiedName', 1_000),
+      beforeCommit: requiredGitSha(input, 'beforeCommit'),
+      afterCommit: requiredGitSha(input, 'afterCommit'),
+    },
+    memoryId: requiredBoundedString(receipt, 'memoryId', 200),
+    beforeChange: parseMcpRecall(receipt['beforeChange']),
+    afterChange: parseMcpRecall(receipt['afterChange']),
+  };
+  const sourceCase = cases.find(({ caseId }) => caseId === result.caseId);
+  const receiptLabel = sourceCase?.labels.find(
+    ({ evidence }) =>
+      evidence.path === result.input.path && evidence.qualifiedName === result.input.qualifiedName,
+  );
+  if (
+    !sourceCase?.provenance ||
+    !receiptLabel?.expectedAffected ||
+    receiptLabel.graph.classification !== 'true_positive' ||
+    result.input.beforeCommit !== sourceCase.beforeCommit ||
+    result.input.afterCommit !== sourceCase.afterCommit ||
+    result.beforeChange.indexedCommit !== sourceCase.beforeCommit ||
+    result.afterChange.indexedCommit !== sourceCase.afterCommit
+  ) {
+    throw new Error('Evaluation MCP receipt does not match its public source case');
+  }
+  const expectedTools = ['freshcontext_recall', 'freshcontext_remember', 'freshcontext_status'];
+  if (JSON.stringify(result.registeredTools) !== JSON.stringify(expectedTools)) {
+    throw new Error('Evaluation MCP receipt has an unexpected tool surface');
+  }
+  if (
+    result.beforeChange.abstained ||
+    result.beforeChange.abstentionReason !== null ||
+    !result.beforeChange.returnedMemoryIds.includes(result.memoryId) ||
+    result.beforeChange.withheldMemoryIds.length !== 0 ||
+    !result.afterChange.abstained ||
+    result.afterChange.abstentionReason !== 'all_matching_memory_unsafe' ||
+    result.afterChange.returnedMemoryIds.length !== 0 ||
+    !result.afterChange.withheldMemoryIds.includes(result.memoryId)
+  ) {
+    throw new Error('Evaluation MCP receipt does not prove recall then abstention');
+  }
+  return result;
+}
+
+function parseMcpRecall(value: unknown): EvaluationMcpRecallReadModel {
+  const recall = requiredRecord(value, 'MCP recall result');
+  requiredLiteral(recall, 'status', 'ready');
+  const reason = recall['abstentionReason'];
+  if (reason !== null && reason !== 'no_memory' && reason !== 'all_matching_memory_unsafe') {
+    throw new Error('Evaluation MCP recall has an invalid abstention reason');
+  }
+  return {
+    status: 'ready',
+    indexedCommit: requiredGitSha(recall, 'indexedCommit'),
+    returnedMemoryIds: stringArray(recall['returnedMemoryIds'], 'returned memory ids'),
+    withheldMemoryIds: stringArray(recall['withheldMemoryIds'], 'withheld memory ids'),
+    abstained: requiredBoolean(recall, 'abstained'),
+    abstentionReason: reason,
+  };
 }
 
 function parseEvaluationLabel(caseId: string, value: unknown): EvaluationLabelReadModel {
@@ -371,6 +514,12 @@ function requiredIsoTimestamp(value: Readonly<Record<string, unknown>>, key: str
   const timestamp = requiredBoundedString(value, key, 64);
   if (new Date(timestamp).toISOString() !== timestamp) throw new Error(`Expected ${key} to be ISO`);
   return timestamp;
+}
+
+function requiredGitSha(value: Readonly<Record<string, unknown>>, key: string): string {
+  const sha = requiredBoundedString(value, key, 64);
+  if (!/^[a-f0-9]{40,64}$/u.test(sha)) throw new Error(`Expected ${key} to be a full Git SHA`);
+  return sha;
 }
 
 function requiredLiteral(

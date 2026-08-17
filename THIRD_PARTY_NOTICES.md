@@ -11,8 +11,10 @@ Exact JavaScript package versions and the full transitive dependency graph are r
   communicates with it over HTTP. No HydraDB source is copied into this repository.
 - [Node.js](https://github.com/nodejs/node), used through the pinned `node:24.14.1-alpine` image, is
   MIT licensed. Packages included by the Alpine base image retain their own licenses.
-- [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) is
-  MIT licensed.
+- [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+  uses an MIT and Apache-2.0 license transition. FreshContext depends on the SDK and preserves a
+  bounded two-file source extract for the attributed evaluation case under
+  `evaluation/cases/mcp-request-id-zero`, with the upstream notice copied alongside it.
 
 ## Application libraries
 

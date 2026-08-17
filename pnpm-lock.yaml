@@ -138,6 +138,12 @@ importers:
       '@freshcontext/indexer':
         specifier: workspace:*
         version: link:../indexer
+      '@freshcontext/mcp':
+        specifier: workspace:*
+        version: link:../../apps/mcp
+      '@modelcontextprotocol/sdk':
+        specifier: 1.29.0
+        version: 1.29.0(zod@4.4.3)
 
   packages/graph:
     dependencies:

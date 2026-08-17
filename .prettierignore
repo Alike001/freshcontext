@@ -4,3 +4,6 @@ coverage
 .git
 .freshcontext
 design/concepts
+evaluation/cases/mcp-request-id-zero/after/packages/core-internal/src/shared/protocol.ts
+evaluation/cases/mcp-request-id-zero/before/packages/core-internal/src/shared/protocol.ts
+evaluation/cases/mcp-request-id-zero/before/packages/server/src/server/server.ts

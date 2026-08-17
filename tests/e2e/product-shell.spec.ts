@@ -26,7 +26,19 @@ test('overview enters the real setup flow without browser errors', async ({ page
   await expect(page.getByText('Verified offline reference', { exact: true })).toBeVisible();
   const precisionRow = page.getByRole('row').filter({ hasText: 'Precision' });
   await expect(precisionRow.getByText('100.0%', { exact: true })).toBeVisible();
-  await expect(precisionRow.getByText('60.0%', { exact: true })).toBeVisible();
+  await expect(precisionRow.getByText('62.5%', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'A real fix from the official MCP TypeScript SDK.' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: /modelcontextprotocol\/typescript-sdk/u }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Same MCP recall. Safe before, withheld after.' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Context returned' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent abstained' })).toBeVisible();
+  await expect(page.getByText('all_matching_memory_unsafe', { exact: false })).toBeVisible();
   await expect(
     page.getByText('One expected impact remains missed beyond the V1 boundary.'),
   ).toBeVisible();
@@ -105,7 +117,7 @@ test('evaluation failure stays explicit and shows no benchmark numbers', async (
 
   await expect(page.getByRole('alert')).toContainText('Evaluation proof unavailable');
   await expect(page.getByText('100.0%', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('60.0%', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('62.5%', { exact: true })).toHaveCount(0);
 });
 
 test('Proof Console failure stays explicit and shows no cached claim', async ({ page }) => {

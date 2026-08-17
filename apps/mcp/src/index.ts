@@ -1,1 +1,2 @@
-export { createFreshContextMcpServer, type MemoryOperations } from './server.js';
+export * from './schemas.js';
+export * from './server.js';

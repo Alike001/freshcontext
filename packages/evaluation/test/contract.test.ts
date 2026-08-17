@@ -12,36 +12,56 @@ describe.skipIf(!runContract)('pinned HydraDB invalidation evaluation', () => {
     expect(artifact.dataset).toEqual({
       status: 'complete',
       source: 'versioned real Git fixtures',
-      caseCount: 2,
-      labelCount: 10,
+      caseCount: 3,
+      labelCount: 16,
     });
     expect(artifact.aggregate.graph).toMatchObject({
-      truePositives: 6,
-      trueNegatives: 3,
+      truePositives: 10,
+      trueNegatives: 5,
       falsePositives: 0,
       falseNegatives: 1,
       precision: 1,
-      recall: 6 / 7,
+      recall: 10 / 11,
       falseNegativeIds: ['policy-depth:beyond-boundary'],
     });
     expect(artifact.aggregate.directFileBaseline).toMatchObject({
-      truePositives: 3,
-      trueNegatives: 1,
-      falsePositives: 2,
-      falseNegatives: 4,
-      precision: 3 / 5,
-      recall: 3 / 7,
+      truePositives: 5,
+      trueNegatives: 2,
+      falsePositives: 3,
+      falseNegatives: 6,
+      precision: 5 / 8,
+      recall: 5 / 11,
       falsePositiveIds: [
+        'mcp-request-id-zero:connect-unrelated',
         'policy-depth:same-file-unrelated',
         'pricing-propagation:same-file-unrelated',
       ],
       falseNegativeIds: [
+        'mcp-request-id-zero:resource-updated',
+        'mcp-request-id-zero:tool-list-changed',
         'policy-depth:beyond-boundary',
         'policy-depth:three-hop-api',
         'policy-depth:two-hop-guard',
         'pricing-propagation:transitive-checkout',
       ],
     });
+    expect(artifact.mcpReceipt).toMatchObject({
+      caseId: 'mcp-request-id-zero',
+      client: '@modelcontextprotocol/sdk Client',
+      tool: 'freshcontext_recall',
+      beforeChange: { abstained: false, withheldMemoryIds: [] },
+      afterChange: {
+        abstained: true,
+        returnedMemoryIds: [],
+        abstentionReason: 'all_matching_memory_unsafe',
+      },
+    });
+    expect(artifact.mcpReceipt.beforeChange.returnedMemoryIds).toContain(
+      artifact.mcpReceipt.memoryId,
+    );
+    expect(artifact.mcpReceipt.afterChange.withheldMemoryIds).toContain(
+      artifact.mcpReceipt.memoryId,
+    );
     const depthCase = artifact.cases.find((entry) => entry.caseId === 'policy-depth');
     for (const result of artifact.cases.flatMap((entry) => entry.labels)) {
       if (result.graph.classification === 'true_positive') {

@@ -11,6 +11,7 @@ import {
   MemoryService,
   SyncService,
   parseEntityPayload,
+  type RecallResult,
 } from '@freshcontext/core';
 import { ImmutableGraphStore, type HydraQueryGateway } from '@freshcontext/graph';
 import type { HydraQueryResponse } from '@freshcontext/hydra';
@@ -22,12 +23,16 @@ import {
 } from '@freshcontext/indexer';
 
 import { calculateBinaryMetrics, type BinaryLabel } from './metrics.js';
+import { startMcpProofSession, type McpProofSession } from './mcp-proof.js';
 import type {
   EvaluationArtifact,
   EvaluationCaseResult,
   EvaluationClassification,
   EvaluationEvidence,
   EvaluationLabelResult,
+  EvaluationMcpRecallResult,
+  EvaluationMcpReceipt,
+  PublicRepositoryProvenance,
 } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -38,6 +43,8 @@ interface CaseManifest {
   readonly caseId: string;
   readonly description: string;
   readonly changeSummary: string;
+  readonly provenance: PublicRepositoryProvenance | null;
+  readonly mcpReceiptLabelId: string | null;
   readonly labels: readonly CaseLabel[];
 }
 
@@ -59,12 +66,18 @@ export async function runEvaluation(hydra: HydraQueryGateway): Promise<Evaluatio
   const cases: EvaluationCaseResult[] = [];
   const graphLabels: BinaryLabel[] = [];
   const baselineLabels: BinaryLabel[] = [];
+  let mcpReceipt: EvaluationMcpReceipt | null = null;
   for (const caseId of caseIds) {
     const result = await runCase(hydra, caseId);
     cases.push(result.caseResult);
     graphLabels.push(...result.graphLabels);
     baselineLabels.push(...result.baselineLabels);
+    if (result.mcpReceipt) {
+      if (mcpReceipt) throw new Error('Evaluation dataset defines more than one MCP receipt');
+      mcpReceipt = result.mcpReceipt;
+    }
   }
+  if (!mcpReceipt) throw new Error('Evaluation dataset does not define an MCP receipt');
   const result = {
     schemaVersion: 1,
     command: 'pnpm evaluate',
@@ -77,6 +90,7 @@ export async function runEvaluation(hydra: HydraQueryGateway): Promise<Evaluatio
       labelCount: graphLabels.length,
     },
     cases,
+    mcpReceipt,
     aggregate: {
       graph: calculateBinaryMetrics(graphLabels),
       directFileBaseline: calculateBinaryMetrics(baselineLabels),
@@ -96,15 +110,17 @@ async function runCase(
   caseResult: EvaluationCaseResult;
   graphLabels: BinaryLabel[];
   baselineLabels: BinaryLabel[];
+  mcpReceipt: EvaluationMcpReceipt | null;
 }> {
   const source = resolve(casesDirectory, caseId);
   const manifest = parseCaseManifest(await readFile(resolve(source, 'case.json'), 'utf8'));
   if (manifest.caseId !== caseId) throw new Error(`Case id mismatch for ${caseId}`);
   const repositoryPath = await mkdtemp(resolve(tmpdir(), `freshcontext-evaluation-${caseId}-`));
+  let proofSession: McpProofSession | null = null;
   try {
     await cp(resolve(source, 'before'), repositoryPath, { recursive: true });
     await initializeGit(repositoryPath);
-    const repositoryId = `evaluation-${caseId}-${process.pid}-${Date.now()}`;
+    const repositoryId = `evaluation-${caseId}`;
     const graph = new ImmutableGraphStore(hydra);
     const baseline = await indexRepository({ repositoryId, repositoryPath, graph });
     const memory = new MemoryService({
@@ -123,7 +139,21 @@ async function runCase(
       memoryIds.set(label.id, record.memoryId);
     }
 
-    await cp(resolve(source, 'after/src'), resolve(repositoryPath, 'src'), {
+    const receiptLabel = manifest.mcpReceiptLabelId
+      ? manifest.labels.find(({ id }) => id === manifest.mcpReceiptLabelId)
+      : undefined;
+    proofSession = receiptLabel ? await startMcpProofSession(memory) : null;
+    const beforeRecall =
+      proofSession && receiptLabel
+        ? await proofSession.recall({
+            repositoryId,
+            commitSha: baseline.snapshot.commit.sha,
+            path: receiptLabel.path,
+            qualifiedName: receiptLabel.qualifiedName,
+          })
+        : null;
+
+    await cp(resolve(source, 'after'), repositoryPath, {
       recursive: true,
       force: true,
     });
@@ -142,6 +172,34 @@ async function runCase(
       repositoryPath,
     });
     const impacted = new Set(synchronized.impactedMemoryIds);
+    let mcpReceipt: EvaluationMcpReceipt | null = null;
+    if (proofSession && receiptLabel && beforeRecall) {
+      const afterRecall = await proofSession.recall({
+        repositoryId,
+        commitSha: afterSnapshot.commit.sha,
+        path: receiptLabel.path,
+        qualifiedName: receiptLabel.qualifiedName,
+      });
+      const memoryId = requiredMemoryId(memoryIds, receiptLabel.id);
+      assertMcpReceiptTransition(beforeRecall, afterRecall, memoryId);
+      mcpReceipt = {
+        caseId,
+        client: '@modelcontextprotocol/sdk Client',
+        transport: 'linked in-process MCP transport',
+        tool: 'freshcontext_recall',
+        registeredTools: proofSession.registeredTools,
+        input: {
+          repositoryId,
+          path: receiptLabel.path,
+          qualifiedName: receiptLabel.qualifiedName,
+          beforeCommit: baseline.snapshot.commit.sha,
+          afterCommit: afterSnapshot.commit.sha,
+        },
+        memoryId,
+        beforeChange: mcpRecallResult(beforeRecall),
+        afterChange: mcpRecallResult(afterRecall),
+      };
+    }
     const graphLabels = manifest.labels.map((label) => ({
       id: `${caseId}:${label.id}`,
       expected: label.expected,
@@ -183,10 +241,12 @@ async function runCase(
     return {
       graphLabels,
       baselineLabels,
+      mcpReceipt,
       caseResult: {
         caseId,
         description: manifest.description,
         changeSummary: manifest.changeSummary,
+        provenance: manifest.provenance,
         beforeCommit: baseline.snapshot.commit.sha,
         afterCommit: afterSnapshot.commit.sha,
         labelCount: manifest.labels.length,
@@ -198,7 +258,11 @@ async function runCase(
       },
     };
   } finally {
-    await rm(repositoryPath, { recursive: true, force: true });
+    try {
+      if (proofSession) await proofSession.close();
+    } finally {
+      await rm(repositoryPath, { recursive: true, force: true });
+    }
   }
 }
 
@@ -221,6 +285,11 @@ export function parseCaseManifest(text: string): CaseManifest {
   assertNonEmpty('caseId', value.caseId);
   assertNonEmpty('description', value.description);
   assertNonEmpty('changeSummary', value.changeSummary);
+  const provenance = parseProvenance('provenance' in value ? value.provenance : null);
+  const mcpReceiptLabelId =
+    'mcpReceiptLabelId' in value && value.mcpReceiptLabelId !== null
+      ? requiredManifestText(value.mcpReceiptLabelId, 'MCP receipt label id')
+      : null;
   const labels = value.labels.map((label: unknown) => {
     if (
       typeof label !== 'object' ||
@@ -267,11 +336,89 @@ export function parseCaseManifest(text: string): CaseManifest {
     throw new Error('Evaluation label ids must be unique');
   }
   if (labels.length === 0) throw new Error('Evaluation case must contain labels');
+  if (mcpReceiptLabelId) {
+    const receiptLabel = labels.find(({ id }) => id === mcpReceiptLabelId);
+    if (!receiptLabel?.expected) {
+      throw new Error('MCP receipt label must identify an affected evaluation label');
+    }
+    if (!provenance) throw new Error('MCP receipt requires public repository provenance');
+  }
   return {
     caseId: value.caseId,
     description: value.description,
     changeSummary: value.changeSummary,
+    provenance,
+    mcpReceiptLabelId,
     labels,
+  };
+}
+
+function parseProvenance(value: unknown): PublicRepositoryProvenance | null {
+  if (value === null) return null;
+  const record = isRecord(value) ? value : null;
+  if (!record || record['kind'] !== 'public_repository') {
+    throw new Error('Invalid public repository provenance');
+  }
+  const sourcePaths = record['sourcePaths'];
+  if (!Array.isArray(sourcePaths) || sourcePaths.length === 0) {
+    throw new Error('Public repository provenance needs source paths');
+  }
+  const parsed = {
+    kind: 'public_repository' as const,
+    repository: requiredManifestText(record['repository'], 'provenance repository'),
+    url: requiredManifestText(record['url'], 'provenance URL'),
+    beforeCommit: requiredManifestText(record['beforeCommit'], 'provenance before commit'),
+    afterCommit: requiredManifestText(record['afterCommit'], 'provenance after commit'),
+    license: requiredManifestText(record['license'], 'provenance license'),
+    sourcePaths: sourcePaths.map((path) => requiredManifestText(path, 'provenance source path')),
+  };
+  if (!/^https:\/\/github\.com\//u.test(parsed.url)) {
+    throw new Error('Public repository provenance URL must use GitHub HTTPS');
+  }
+  if (!/^[a-f0-9]{40}$/u.test(parsed.beforeCommit) || !/^[a-f0-9]{40}$/u.test(parsed.afterCommit)) {
+    throw new Error('Public repository provenance commits must be full Git SHAs');
+  }
+  return parsed;
+}
+
+function requiredManifestText(value: unknown, name: string): string {
+  if (typeof value !== 'string') throw new Error(`Invalid ${name}`);
+  assertNonEmpty(name, value);
+  return value;
+}
+
+function assertMcpReceiptTransition(
+  before: RecallResult,
+  after: RecallResult,
+  memoryId: string,
+): void {
+  if (
+    before.status !== 'ready' ||
+    before.abstained ||
+    !before.memories.some((memory) => memory.memoryId === memoryId) ||
+    before.withheldCount !== 0
+  ) {
+    throw new Error('MCP receipt did not return the current memory before the change');
+  }
+  if (
+    after.status !== 'ready' ||
+    !after.abstained ||
+    after.memories.length !== 0 ||
+    after.abstentionReason !== 'all_matching_memory_unsafe' ||
+    !after.withheldMemoryIds.includes(memoryId)
+  ) {
+    throw new Error('MCP receipt did not abstain on the unsafe memory after the change');
+  }
+}
+
+function mcpRecallResult(result: RecallResult): EvaluationMcpRecallResult {
+  return {
+    status: 'ready',
+    indexedCommit: result.indexedCommit,
+    returnedMemoryIds: result.memories.map(({ memoryId }) => memoryId),
+    withheldMemoryIds: result.withheldMemoryIds,
+    abstained: result.abstained,
+    abstentionReason: result.abstentionReason,
   };
 }
 

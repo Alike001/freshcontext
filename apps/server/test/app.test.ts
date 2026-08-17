@@ -291,11 +291,16 @@ describe('FreshContext HTTP service', () => {
     expect(response.json()).toMatchObject({
       status: 'ready',
       source: 'verified_reference',
-      evaluationId: '2fd14725009b9b93',
-      dataset: { caseCount: 2, labelCount: 10 },
+      evaluationId: '83fa685433442945',
+      dataset: { caseCount: 3, labelCount: 16 },
       aggregate: {
-        graph: { precision: 1, recall: 6 / 7 },
-        directFileBaseline: { precision: 0.6, recall: 3 / 7 },
+        graph: { precision: 1, recall: 10 / 11 },
+        directFileBaseline: { precision: 0.625, recall: 5 / 11 },
+      },
+      mcpReceipt: {
+        tool: 'freshcontext_recall',
+        beforeChange: { abstained: false },
+        afterChange: { abstained: true },
       },
     });
     await app.close();

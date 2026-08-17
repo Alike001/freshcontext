@@ -6,14 +6,262 @@
   "dataset": {
     "status": "complete",
     "source": "versioned real Git fixtures",
-    "caseCount": 2,
-    "labelCount": 10
+    "caseCount": 3,
+    "labelCount": 16
   },
   "cases": [
+    {
+      "caseId": "mcp-request-id-zero",
+      "description": "The official MCP TypeScript SDK preserves related notifications for legal JSON-RPC id zero.",
+      "changeSummary": "The debounce guard changed from a truthiness check to an explicit undefined check, affecting notification callers in an unchanged server file.",
+      "provenance": {
+        "kind": "public_repository",
+        "repository": "modelcontextprotocol/typescript-sdk",
+        "url": "https://github.com/modelcontextprotocol/typescript-sdk",
+        "beforeCommit": "4e11aad37a963d51c6e245bcdf86457f32882709",
+        "afterCommit": "26bc4a28142faeac0b54eef17ef6fee3378ca4de",
+        "license": "MIT and Apache-2.0 transition notice",
+        "sourcePaths": [
+          "packages/core-internal/src/shared/protocol.ts",
+          "packages/server/src/server/server.ts"
+        ]
+      },
+      "beforeCommit": "4f8dbd17d83490aa2851637fe099592e9db28f4a",
+      "afterCommit": "551e9fa66b4744fcd1079a3dd11da0738335dda2",
+      "labelCount": 6,
+      "changedSymbolCount": 2,
+      "unresolvedCallCount": 87,
+      "labels": [
+        {
+          "id": "debounce-guard",
+          "claim": "The notification debounce guard treats a related request id of zero as present.",
+          "evidence": {
+            "path": "packages/core-internal/src/shared/protocol.ts",
+            "qualifiedName": "Protocol._notificationViaCodec"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol._notificationViaCodec"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 0,
+            "actualPath": [
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol._notificationViaCodec"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "true_positive"
+          }
+        },
+        {
+          "id": "notification",
+          "claim": "Protocol.notification delegates to the changed codec-aware debounce guard.",
+          "evidence": {
+            "path": "packages/core-internal/src/shared/protocol.ts",
+            "qualifiedName": "Protocol.notification"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol._notificationViaCodec"
+            },
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol.notification"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 1,
+            "actualPath": [
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol._notificationViaCodec"
+              },
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol.notification"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "true_positive"
+          }
+        },
+        {
+          "id": "tool-list-changed",
+          "claim": "Server tool-list notifications depend on the corrected related-request debounce behavior.",
+          "evidence": {
+            "path": "packages/server/src/server/server.ts",
+            "qualifiedName": "Server.sendToolListChanged"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol._notificationViaCodec"
+            },
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol.notification"
+            },
+            {
+              "path": "packages/server/src/server/server.ts",
+              "qualifiedName": "Server.sendToolListChanged"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 2,
+            "actualPath": [
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol._notificationViaCodec"
+              },
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol.notification"
+              },
+              {
+                "path": "packages/server/src/server/server.ts",
+                "qualifiedName": "Server.sendToolListChanged"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "resource-updated",
+          "claim": "Server resource-update notifications depend on the corrected related-request debounce behavior.",
+          "evidence": {
+            "path": "packages/server/src/server/server.ts",
+            "qualifiedName": "Server.sendResourceUpdated"
+          },
+          "expectedAffected": true,
+          "expectedPath": [
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol._notificationViaCodec"
+            },
+            {
+              "path": "packages/core-internal/src/shared/protocol.ts",
+              "qualifiedName": "Protocol.notification"
+            },
+            {
+              "path": "packages/server/src/server/server.ts",
+              "qualifiedName": "Server.sendResourceUpdated"
+            }
+          ],
+          "graph": {
+            "affected": true,
+            "classification": "true_positive",
+            "callHops": 2,
+            "actualPath": [
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol._notificationViaCodec"
+              },
+              {
+                "path": "packages/core-internal/src/shared/protocol.ts",
+                "qualifiedName": "Protocol.notification"
+              },
+              {
+                "path": "packages/server/src/server/server.ts",
+                "qualifiedName": "Server.sendResourceUpdated"
+              }
+            ]
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "false_negative"
+          }
+        },
+        {
+          "id": "connect-unrelated",
+          "claim": "Protocol connection setup is unrelated to the notification debounce fix.",
+          "evidence": {
+            "path": "packages/core-internal/src/shared/protocol.ts",
+            "qualifiedName": "Protocol.connect"
+          },
+          "expectedAffected": false,
+          "expectedPath": null,
+          "graph": {
+            "affected": false,
+            "classification": "true_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": true,
+            "classification": "false_positive"
+          }
+        },
+        {
+          "id": "capabilities-unrelated",
+          "claim": "Reading client capabilities is unrelated to the notification debounce fix.",
+          "evidence": {
+            "path": "packages/server/src/server/server.ts",
+            "qualifiedName": "Server.getClientCapabilities"
+          },
+          "expectedAffected": false,
+          "expectedPath": null,
+          "graph": {
+            "affected": false,
+            "classification": "true_negative",
+            "callHops": null,
+            "actualPath": null
+          },
+          "directFileBaseline": {
+            "affected": false,
+            "classification": "true_negative"
+          }
+        }
+      ],
+      "graph": {
+        "truePositives": 4,
+        "trueNegatives": 2,
+        "falsePositives": 0,
+        "falseNegatives": 0,
+        "precision": 1,
+        "recall": 1,
+        "falsePositiveIds": [],
+        "falseNegativeIds": []
+      },
+      "directFileBaseline": {
+        "truePositives": 2,
+        "trueNegatives": 1,
+        "falsePositives": 1,
+        "falseNegatives": 2,
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "falsePositiveIds": ["mcp-request-id-zero:connect-unrelated"],
+        "falseNegativeIds": [
+          "mcp-request-id-zero:resource-updated",
+          "mcp-request-id-zero:tool-list-changed"
+        ]
+      }
+    },
     {
       "caseId": "policy-depth",
       "description": "An authorization policy changes below increasingly distant callers.",
       "changeSummary": "Tighten isAllowed without touching any guard or entry-point file.",
+      "provenance": null,
       "beforeCommit": "feb85c093d073b71111ce5bbcb4a998ad613c9a8",
       "afterCommit": "85131fb45989eaa9425c5af38b1650561d943ac7",
       "labelCount": 6,
@@ -261,6 +509,7 @@
       "caseId": "pricing-propagation",
       "description": "A pricing rule changes underneath checkout behavior and one formatter is removed.",
       "changeSummary": "Change fee thresholds and remove formatTotal without touching checkout.ts.",
+      "provenance": null,
       "beforeCommit": "932b4b617139240065e3904b0c15d24827ded811",
       "afterCommit": "2e5a4bf95eef8c8b2c03e1c01abbdb667f67fab4",
       "labelCount": 4,
@@ -416,29 +665,63 @@
       }
     }
   ],
+  "mcpReceipt": {
+    "caseId": "mcp-request-id-zero",
+    "client": "@modelcontextprotocol/sdk Client",
+    "transport": "linked in-process MCP transport",
+    "tool": "freshcontext_recall",
+    "registeredTools": ["freshcontext_recall", "freshcontext_remember", "freshcontext_status"],
+    "input": {
+      "repositoryId": "evaluation-mcp-request-id-zero",
+      "path": "packages/server/src/server/server.ts",
+      "qualifiedName": "Server.sendToolListChanged",
+      "beforeCommit": "4f8dbd17d83490aa2851637fe099592e9db28f4a",
+      "afterCommit": "551e9fa66b4744fcd1079a3dd11da0738335dda2"
+    },
+    "memoryId": "de913c6c96960298a22d85c2a2246812",
+    "beforeChange": {
+      "status": "ready",
+      "indexedCommit": "4f8dbd17d83490aa2851637fe099592e9db28f4a",
+      "returnedMemoryIds": ["de913c6c96960298a22d85c2a2246812"],
+      "withheldMemoryIds": [],
+      "abstained": false,
+      "abstentionReason": null
+    },
+    "afterChange": {
+      "status": "ready",
+      "indexedCommit": "551e9fa66b4744fcd1079a3dd11da0738335dda2",
+      "returnedMemoryIds": [],
+      "withheldMemoryIds": ["de913c6c96960298a22d85c2a2246812"],
+      "abstained": true,
+      "abstentionReason": "all_matching_memory_unsafe"
+    }
+  },
   "aggregate": {
     "graph": {
-      "truePositives": 6,
-      "trueNegatives": 3,
+      "truePositives": 10,
+      "trueNegatives": 5,
       "falsePositives": 0,
       "falseNegatives": 1,
       "precision": 1,
-      "recall": 0.8571428571428571,
+      "recall": 0.9090909090909091,
       "falsePositiveIds": [],
       "falseNegativeIds": ["policy-depth:beyond-boundary"]
     },
     "directFileBaseline": {
-      "truePositives": 3,
-      "trueNegatives": 1,
-      "falsePositives": 2,
-      "falseNegatives": 4,
-      "precision": 0.6,
-      "recall": 0.42857142857142855,
+      "truePositives": 5,
+      "trueNegatives": 2,
+      "falsePositives": 3,
+      "falseNegatives": 6,
+      "precision": 0.625,
+      "recall": 0.45454545454545453,
       "falsePositiveIds": [
+        "mcp-request-id-zero:connect-unrelated",
         "policy-depth:same-file-unrelated",
         "pricing-propagation:same-file-unrelated"
       ],
       "falseNegativeIds": [
+        "mcp-request-id-zero:resource-updated",
+        "mcp-request-id-zero:tool-list-changed",
         "policy-depth:beyond-boundary",
         "policy-depth:three-hop-api",
         "policy-depth:two-hop-guard",
@@ -446,6 +729,6 @@
       ]
     }
   },
-  "evaluationId": "2fd14725009b9b93",
-  "completedAt": "2026-08-16T21:23:05.480Z"
+  "evaluationId": "83fa685433442945",
+  "completedAt": "2026-08-17T09:48:37.647Z"
 }

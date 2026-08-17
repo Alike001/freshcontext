@@ -6,8 +6,8 @@ container and its pinned HydraDB OSS runtime.
 - `screenshots/overview.png` shows the 10-second product story and verified HydraDB state.
 - `screenshots/proof-console.png` shows the exact cross-file HydraDB impact path and Git diff.
 - `screenshots/review-complete.png` shows the immutable supersession result.
-- `screenshots/evaluation.png` shows the complete checked evaluation reference, including its
-  visible four-hop false negative.
+- `screenshots/evaluation.png` shows the checked public-source trace, MCP recall and abstention
+  receipt, score comparison, and visible four-hop false negative.
 - `screenshots/setup.png` shows the actual local service and repository state.
 - `video/evaluation-proof.webm` records the production flow from Overview through the Proof Console,
   review result, Evaluation, and Setup. It is a technical backup, not the final narrated

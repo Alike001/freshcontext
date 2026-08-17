@@ -17,8 +17,9 @@ export function EvaluationPage() {
         <p className="document-index">03 / Evaluation</p>
         <h1>A graph should earn its place.</h1>
         <p>
-          The same ten expected outcomes run through FreshContext and a direct-file baseline. Every
-          score below comes from committed Git changes executed against HydraDB OSS.
+          Every declared outcome runs through FreshContext and a direct-file baseline. The checked
+          result includes authored edge cases, attributed public source, and a real MCP client
+          receipt.
         </p>
       </header>
 
@@ -69,6 +70,7 @@ function EvaluationReady({ data }: { readonly data: EvaluationResponse }) {
   const boundaryMiss = data.cases
     .flatMap((entry) => entry.labels.map((label) => ({ caseId: entry.caseId, label })))
     .find(({ label }) => label.graph.classification === 'false_negative');
+  const publicCase = data.cases.find(({ provenance }) => provenance !== null);
 
   return (
     <>
@@ -147,6 +149,8 @@ function EvaluationReady({ data }: { readonly data: EvaluationResponse }) {
         </p>
       </section>
 
+      {publicCase?.provenance ? <PublicSourceProof entry={publicCase} /> : null}
+      <McpReceipt receipt={data.mcpReceipt} />
       {transitive ? <TransitiveProof result={transitive} /> : null}
       {boundaryMiss ? (
         <BoundaryDisclosure caseId={boundaryMiss.caseId} label={boundaryMiss.label} />
@@ -184,6 +188,148 @@ function EvaluationReady({ data }: { readonly data: EvaluationResponse }) {
         </p>
       </aside>
     </>
+  );
+}
+
+function PublicSourceProof({ entry }: { readonly entry: EvaluationCase }) {
+  const provenance = entry.provenance;
+  if (!provenance) return null;
+  const transitive = entry.labels
+    .filter((label) => label.graph.classification === 'true_positive')
+    .sort((left, right) => (right.graph.callHops ?? -1) - (left.graph.callHops ?? -1))[0];
+  return (
+    <section className="public-trace" aria-labelledby="public-trace-title">
+      <div className="public-trace-copy">
+        <p className="technical-label">Attributed public trace</p>
+        <h2 id="public-trace-title">A real fix from the official MCP TypeScript SDK.</h2>
+        <p>
+          Exact source from two upstream commits proves that a guard change reaches notification
+          callers in an unchanged server file. The bounded extract and upstream license ship with
+          this evaluation.
+        </p>
+        <a href={provenance.url} target="_blank" rel="noreferrer">
+          {provenance.repository}
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <div className="public-trace-proof">
+        <dl>
+          <div>
+            <dt>Upstream change</dt>
+            <dd>
+              <a
+                href={`${provenance.url}/commit/${provenance.afterCommit}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {shortSha(provenance.beforeCommit)} → {shortSha(provenance.afterCommit)}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt>License</dt>
+            <dd>{provenance.license}</dd>
+          </div>
+          <div>
+            <dt>Bounded source</dt>
+            <dd>{provenance.sourcePaths.length} exact files</dd>
+          </div>
+        </dl>
+        {transitive?.graph.actualPath ? (
+          <ProofPath
+            steps={transitive.graph.actualPath.map((step) => ({
+              name: step.qualifiedName,
+              location: step.path,
+            }))}
+          />
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function McpReceipt({ receipt }: { readonly receipt: EvaluationResponse['mcpReceipt'] }) {
+  return (
+    <section className="mcp-receipt" aria-labelledby="mcp-receipt-title">
+      <header>
+        <div>
+          <p className="technical-label">Real protocol receipt</p>
+          <h2 id="mcp-receipt-title">Same MCP recall. Safe before, withheld after.</h2>
+          <p>
+            The official SDK client called the production FreshContext tool on both commits. The
+            second response returned no stale context and named the memory it withheld.
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>Client</dt>
+            <dd>{receipt.client}</dd>
+          </div>
+          <div>
+            <dt>Transport</dt>
+            <dd>{receipt.transport}</dd>
+          </div>
+          <div>
+            <dt>Tool</dt>
+            <dd>{receipt.tool}</dd>
+          </div>
+        </dl>
+      </header>
+      <div className="receipt-input">
+        <span>Exact symbol input</span>
+        <code>
+          {receipt.input.qualifiedName} · {receipt.input.path}
+        </code>
+      </div>
+      <div className="receipt-results">
+        <ReceiptState
+          index="01"
+          title="Context returned"
+          commit={receipt.beforeChange.indexedCommit}
+          memoryIds={receipt.beforeChange.returnedMemoryIds}
+          detail="Current evidence-bound memory entered agent context."
+        />
+        <span className="receipt-transition" aria-hidden="true">
+          committed change → HydraDB sync
+        </span>
+        <ReceiptState
+          index="02"
+          title="Agent abstained"
+          commit={receipt.afterChange.indexedCommit}
+          memoryIds={receipt.afterChange.withheldMemoryIds}
+          detail="No stale memory returned · all_matching_memory_unsafe"
+          withheld
+        />
+      </div>
+    </section>
+  );
+}
+
+function ReceiptState({
+  index,
+  title,
+  commit,
+  memoryIds,
+  detail,
+  withheld = false,
+}: {
+  readonly index: string;
+  readonly title: string;
+  readonly commit: string;
+  readonly memoryIds: readonly string[];
+  readonly detail: string;
+  readonly withheld?: boolean;
+}) {
+  return (
+    <article className={`receipt-state${withheld ? ' receipt-withheld' : ''}`}>
+      <span>{index}</span>
+      <div>
+        <p className="technical-label">{shortSha(commit)}</p>
+        <h3>{title}</h3>
+        <p>{detail}</p>
+        <code>{memoryIds.map(shortId).join(', ')}</code>
+      </div>
+    </article>
   );
 }
 
@@ -259,6 +405,14 @@ function CaseLedger({ entry }: { readonly entry: EvaluationCase }) {
           <p className="technical-label">{entry.caseId}</p>
           <h3>{entry.description}</h3>
           <p>{entry.changeSummary}</p>
+          {entry.provenance ? (
+            <p className="case-source">
+              Public source ·{' '}
+              <a href={entry.provenance.url} target="_blank" rel="noreferrer">
+                {entry.provenance.repository}
+              </a>
+            </p>
+          ) : null}
         </div>
         <dl>
           <div>
@@ -270,7 +424,7 @@ function CaseLedger({ entry }: { readonly entry: EvaluationCase }) {
             <dd>{entry.changedSymbolCount}</dd>
           </div>
           <div>
-            <dt>Unresolved calls</dt>
+            <dt>{entry.provenance ? 'Outside extract' : 'Unresolved calls'}</dt>
             <dd>{entry.unresolvedCallCount}</dd>
           </div>
         </dl>
@@ -323,4 +477,12 @@ function formatPercent(value: number | null): string {
 
 function formatClassification(value: EvaluationClassification): string {
   return value.replaceAll('_', ' ');
+}
+
+function shortSha(value: string): string {
+  return value.slice(0, 8);
+}
+
+function shortId(value: string): string {
+  return value.length > 18 ? `${value.slice(0, 16)}…` : value;
 }

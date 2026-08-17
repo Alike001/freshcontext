@@ -27,8 +27,8 @@ The shortest judge path is:
 2. Open Proof Console and inspect the review-needed claim, ordered HydraDB path, and exact Git diff.
 3. Submit the suggested correction and see the original become superseded while the replacement
    becomes current.
-4. Open Evaluation to compare the graph result with the direct-file baseline, including the visible
-   four-hop limit.
+4. Open Evaluation to inspect the attributed MCP SDK trace, real MCP recall and abstention receipt,
+   baseline comparison, and visible four-hop limit.
 5. Open Setup to verify the real HydraDB round trip and selected Git commit.
 
 Stop the stack with `docker compose down`. Use `docker compose down --volumes` only when you
@@ -47,9 +47,12 @@ HydraDB, persists the shortest proof for each affected memory, and withholds tha
 agent context. A resumable review operation preserves the old claim, validates current evidence,
 links a replacement through `SUPERSEDES`, and activates only the reviewed version. The reproducible
 evaluation runs real committed TypeScript changes and compares graph traversal with a direct-file
-baseline. The interface labels example data and reports unavailable or unconfigured states instead
-of inventing repository activity. Its Evaluation route reads a strictly validated, versioned result
-from the same pinned-Hydra command so the proof remains available offline.
+baseline. It includes exact source from an attributed MCP TypeScript SDK fix and records a real MCP
+client receiving safe context before the change, then receiving an explicit abstention after HydraDB
+marks the matching memory unsafe. The interface labels example data and reports unavailable or
+unconfigured states instead of inventing repository activity. Its Evaluation route reads a strictly
+validated, versioned result from the same pinned-Hydra command so the proof remains available
+offline.
 
 The default startup materializes a labelled checkout example as a real two-commit Git repository.
 FreshContext indexes its baseline, stores evidence-bound claims, synchronizes its fee change, and
@@ -88,11 +91,13 @@ Run the pinned cases through real Git repositories and HydraDB OSS with one comm
 pnpm evaluate
 ```
 
-The command writes `.freshcontext/evaluation/latest.json`. The dataset includes direct, removed,
-unrelated, two-hop, three-hop, and intentionally out-of-bound four-hop cases. Results report the
-full confusion matrix, precision, recall, false-positive ids, false-negative ids, and the same
-metrics for a direct-file baseline. The four-hop miss is kept visible because V1 deliberately stops
-at three reverse call hops.
+The command writes `.freshcontext/evaluation/latest.json`. The 16-label dataset includes direct,
+removed, unrelated, two-hop, three-hop, and intentionally out-of-bound four-hop cases. One case is a
+bounded, licensed extract of an exact public fix from the official MCP TypeScript SDK. Results
+report the full confusion matrix, precision, recall, false-positive ids, false-negative ids, and the
+same metrics for a direct-file baseline. The artifact also records the official MCP SDK client
+calling `freshcontext_recall` before and after the committed change. The four-hop miss is kept
+visible because V1 deliberately stops at three reverse call hops.
 
 The `/evaluation` route serves `evaluation/reference-result.json`, a checked-in output from that
 exact command and dataset. The interface labels it `Verified offline reference`. A missing, corrupt,
@@ -112,7 +117,8 @@ The local stdio server publishes three bounded tools:
 
 The MCP process is packaged in the `mcp-runtime` Docker target. Its contract test spawns the real
 stdio process and exercises it against the pinned HydraDB container. There is no in-memory or second
-database fallback.
+database fallback. The reproducible evaluation also creates an official SDK client over the SDK's
+linked in-process MCP transport and publishes its checked recall and abstention receipt.
 
 ## Graph-native invalidation
 

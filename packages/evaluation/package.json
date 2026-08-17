@@ -22,6 +22,8 @@
     "@freshcontext/core": "workspace:*",
     "@freshcontext/graph": "workspace:*",
     "@freshcontext/hydra": "workspace:*",
-    "@freshcontext/indexer": "workspace:*"
+    "@freshcontext/indexer": "workspace:*",
+    "@freshcontext/mcp": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0"
   }
 }

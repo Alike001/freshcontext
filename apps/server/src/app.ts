@@ -140,6 +140,47 @@ const evaluationClassificationSchema = {
   enum: ['true_positive', 'true_negative', 'false_positive', 'false_negative'],
 } as const;
 
+const publicRepositoryProvenanceSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'repository', 'url', 'beforeCommit', 'afterCommit', 'license', 'sourcePaths'],
+  properties: {
+    kind: { type: 'string', const: 'public_repository' },
+    repository: { type: 'string' },
+    url: { type: 'string' },
+    beforeCommit: { type: 'string' },
+    afterCommit: { type: 'string' },
+    license: { type: 'string' },
+    sourcePaths: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+const mcpRecallSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'status',
+    'indexedCommit',
+    'returnedMemoryIds',
+    'withheldMemoryIds',
+    'abstained',
+    'abstentionReason',
+  ],
+  properties: {
+    status: { type: 'string', const: 'ready' },
+    indexedCommit: { type: 'string' },
+    returnedMemoryIds: { type: 'array', items: { type: 'string' } },
+    withheldMemoryIds: { type: 'array', items: { type: 'string' } },
+    abstained: { type: 'boolean' },
+    abstentionReason: {
+      anyOf: [
+        { type: 'string', enum: ['no_memory', 'all_matching_memory_unsafe'] },
+        { type: 'null' },
+      ],
+    },
+  },
+} as const;
+
 const evaluationResponseSchema = {
   type: 'object',
   additionalProperties: false,
@@ -153,6 +194,7 @@ const evaluationResponseSchema = {
     'traversalBoundary',
     'dataset',
     'cases',
+    'mcpReceipt',
     'aggregate',
   ],
   properties: {
@@ -183,6 +225,9 @@ const evaluationResponseSchema = {
           'caseId',
           'description',
           'changeSummary',
+          'provenance',
+          'beforeCommit',
+          'afterCommit',
           'labelCount',
           'changedSymbolCount',
           'unresolvedCallCount',
@@ -194,6 +239,9 @@ const evaluationResponseSchema = {
           caseId: { type: 'string' },
           description: { type: 'string' },
           changeSummary: { type: 'string' },
+          provenance: { anyOf: [publicRepositoryProvenanceSchema, { type: 'null' }] },
+          beforeCommit: { type: 'string' },
+          afterCommit: { type: 'string' },
           labelCount: { type: 'integer', minimum: 0 },
           changedSymbolCount: { type: 'integer', minimum: 0 },
           unresolvedCallCount: { type: 'integer', minimum: 0 },
@@ -245,6 +293,43 @@ const evaluationResponseSchema = {
           graph: evaluationMetricsSchema,
           directFileBaseline: evaluationMetricsSchema,
         },
+      },
+    },
+    mcpReceipt: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'caseId',
+        'client',
+        'transport',
+        'tool',
+        'registeredTools',
+        'input',
+        'memoryId',
+        'beforeChange',
+        'afterChange',
+      ],
+      properties: {
+        caseId: { type: 'string' },
+        client: { type: 'string', const: '@modelcontextprotocol/sdk Client' },
+        transport: { type: 'string', const: 'linked in-process MCP transport' },
+        tool: { type: 'string', const: 'freshcontext_recall' },
+        registeredTools: { type: 'array', items: { type: 'string' } },
+        input: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['repositoryId', 'path', 'qualifiedName', 'beforeCommit', 'afterCommit'],
+          properties: {
+            repositoryId: { type: 'string' },
+            path: { type: 'string' },
+            qualifiedName: { type: 'string' },
+            beforeCommit: { type: 'string' },
+            afterCommit: { type: 'string' },
+          },
+        },
+        memoryId: { type: 'string' },
+        beforeChange: mcpRecallSchema,
+        afterChange: mcpRecallSchema,
       },
     },
     aggregate: {

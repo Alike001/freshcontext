@@ -56,21 +56,22 @@ Narration:
 
 This proves a complete, failure-aware workflow.
 
-## 1:55 to 2:25, result quality
+## 1:55 to 2:32, result quality and agent receipt
 
-Open Evaluation. Show the score comparison, one detected multi-hop case, and the visible four-hop
-false negative.
+Open Evaluation. Show the score comparison, attributed public MCP SDK trace, MCP receipt, and the
+visible four-hop false negative.
 
 Narration:
 
-> The checked evaluation reruns real Git changes against the pinned HydraDB engine. Across ten
-> labels, graph traversal reaches 100 percent precision and 85.7 percent recall. Direct-file
-> matching reaches 60 percent precision and 42.9 percent recall. The four-hop miss stays visible
-> because V1 deliberately supports zero through three reverse call hops.
+> The checked evaluation reruns 16 labels against the pinned HydraDB engine. Graph traversal reaches
+> 100 percent precision and 90.9 percent recall, compared with 62.5 percent precision and 45.5
+> percent recall for direct-file matching. This trace uses exact source from a real MCP TypeScript
+> SDK fix. The official MCP client receives the memory before the commit, then FreshContext returns
+> no stale context and names the withheld memory after sync. The four-hop miss stays visible.
 
 This proves quality of results without hiding the boundary.
 
-## 2:25 to 2:45, close with verifiability
+## 2:32 to 2:45, close with verifiability
 
 Open Setup and briefly show HydraDB connected, example data, selected commit, and ingestion counts.
 

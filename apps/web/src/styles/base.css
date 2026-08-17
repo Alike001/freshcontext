@@ -163,7 +163,7 @@ a:focus-visible {
 .hero-copy h1 {
   max-width: 18ch;
   margin: 0;
-  font-size: clamp(2.9rem, 3.6vw, 4.8rem);
+  font-size: clamp(2.7rem, 3.2vw, 4rem);
   font-weight: 560;
   letter-spacing: -0.072em;
   line-height: 0.93;
@@ -624,7 +624,7 @@ a:focus-visible {
 .document-header h1 {
   max-width: 16ch;
   margin: var(--space-4) 0 0;
-  font-size: clamp(2.5rem, 4.5vw, 4.75rem);
+  font-size: clamp(2.25rem, 3.6vw, 3.75rem);
   font-weight: 560;
   letter-spacing: -0.06em;
   line-height: 0.96;
@@ -867,7 +867,7 @@ a:focus-visible {
 .score-featured > strong,
 .score-featured > span:last-child {
   font-family: var(--font-code);
-  font-size: clamp(1.75rem, 3.2vw, 3.25rem);
+  font-size: clamp(1.6rem, 2.5vw, 2.5rem);
   font-weight: 520;
   letter-spacing: -0.05em;
 }
@@ -896,7 +896,7 @@ a:focus-visible {
 .evaluation-reproduce h2 {
   max-width: 18ch;
   margin: var(--space-3) 0 0;
-  font-size: clamp(1.8rem, 3vw, 3.25rem);
+  font-size: clamp(1.65rem, 2.5vw, 2.5rem);
   font-weight: 560;
   letter-spacing: -0.05em;
   line-height: 1;
@@ -913,6 +913,189 @@ a:focus-visible {
 .evaluation-transitive .proof-path {
   align-self: center;
   margin-top: 0;
+}
+
+.public-trace {
+  display: grid;
+  grid-template-columns: minmax(20rem, 0.8fr) minmax(36rem, 1.2fr);
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+  border-bottom: var(--border-strong);
+}
+
+.public-trace h2,
+.mcp-receipt h2 {
+  max-width: 22ch;
+  margin: var(--space-3) 0 0;
+  font-size: clamp(1.65rem, 2.4vw, 2.45rem);
+  font-weight: 560;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.public-trace-copy > p:nth-of-type(2),
+.mcp-receipt header > div > p:last-child {
+  max-width: 42rem;
+  margin: var(--space-4) 0 0;
+  color: var(--ink-700);
+  line-height: 1.55;
+}
+
+.public-trace-copy > a {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  color: var(--ink-950);
+  font-family: var(--font-code);
+  font-size: 0.76rem;
+  text-underline-offset: 0.3rem;
+}
+
+.public-trace-proof {
+  min-width: 0;
+  padding-left: var(--space-6);
+  border-left: 3px solid var(--color-primary);
+}
+
+.public-trace-proof dl,
+.mcp-receipt header dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  border-top: var(--border-strong);
+  border-bottom: var(--border-default);
+}
+
+.public-trace-proof dl > div,
+.mcp-receipt header dl > div {
+  min-width: 0;
+  padding: var(--space-3);
+  border-right: var(--border-default);
+}
+
+.public-trace-proof dl > div:last-child,
+.mcp-receipt header dl > div:last-child {
+  border-right: 0;
+}
+
+.public-trace-proof dt,
+.mcp-receipt dt {
+  color: var(--color-muted);
+  font-family: var(--font-technical);
+  font-size: 0.61rem;
+  text-transform: uppercase;
+}
+
+.public-trace-proof dd,
+.mcp-receipt dd {
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-code);
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.mcp-receipt {
+  padding: var(--space-8) 0;
+  border-bottom: var(--border-strong);
+}
+
+.mcp-receipt > header {
+  display: grid;
+  grid-template-columns: minmax(24rem, 1fr) minmax(34rem, 1fr);
+  gap: var(--space-8);
+  align-items: end;
+}
+
+.receipt-input {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+  padding: var(--space-4) 0;
+  border-top: var(--border-strong);
+  border-bottom: var(--border-default);
+}
+
+.receipt-input span {
+  color: var(--color-muted);
+  font-family: var(--font-technical);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.receipt-input code {
+  overflow-wrap: anywhere;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+}
+
+.receipt-results {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) 12rem minmax(18rem, 1fr);
+  align-items: stretch;
+  margin-top: var(--space-5);
+}
+
+.receipt-state {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  border-top: 3px solid var(--ink-950);
+  border-bottom: var(--border-strong);
+  background: var(--color-surface);
+}
+
+.receipt-state > span {
+  padding: var(--space-4) var(--space-3);
+  border-right: var(--border-default);
+  color: var(--color-muted);
+  font-family: var(--font-technical);
+  font-size: 0.66rem;
+}
+
+.receipt-state > div {
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.receipt-state h3 {
+  margin: var(--space-2) 0 0;
+  font-size: 1.15rem;
+  font-weight: 610;
+}
+
+.receipt-state p:not(.technical-label) {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-700);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.receipt-state code {
+  display: block;
+  margin-top: var(--space-3);
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+}
+
+.receipt-state.receipt-withheld {
+  border-top-color: var(--color-review);
+  background: color-mix(in srgb, var(--color-review) 14%, var(--color-surface));
+}
+
+.receipt-transition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--color-muted);
+  font-family: var(--font-technical);
+  font-size: 0.61rem;
+  line-height: 1.45;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .boundary-disclosure {
@@ -965,6 +1148,11 @@ a:focus-visible {
   margin: var(--space-3) 0 0;
   color: var(--ink-700);
   line-height: 1.5;
+}
+
+.case-ledger .case-source {
+  font-family: var(--font-technical);
+  font-size: 0.68rem;
 }
 
 .case-ledger dl {
@@ -1621,9 +1809,29 @@ a:focus-visible {
   .comparison-layout,
   .start-section,
   .evaluation-provenance,
+  .public-trace,
   .evaluation-transitive,
   .evaluation-reproduce {
     grid-template-columns: 1fr;
+  }
+
+  .mcp-receipt > header {
+    grid-template-columns: 1fr;
+  }
+
+  .public-trace-proof {
+    padding-top: var(--space-5);
+    padding-left: 0;
+    border-top: 3px solid var(--color-primary);
+    border-left: 0;
+  }
+
+  .receipt-results {
+    grid-template-columns: 1fr;
+  }
+
+  .receipt-transition {
+    min-height: 4rem;
   }
 
   .score-row {
@@ -1709,7 +1917,7 @@ a:focus-visible {
   }
 
   .hero-copy h1 {
-    font-size: clamp(2.5rem, 12vw, 3.35rem);
+    font-size: clamp(2.25rem, 10vw, 2.9rem);
   }
 
   .proof-dossier {
@@ -1778,6 +1986,22 @@ a:focus-visible {
 
   .evaluation-provenance dl {
     grid-template-columns: 1fr;
+  }
+
+  .public-trace-proof dl,
+  .mcp-receipt header dl {
+    grid-template-columns: 1fr;
+  }
+
+  .public-trace-proof dl > div,
+  .mcp-receipt header dl > div {
+    border-right: 0;
+    border-bottom: var(--border-default);
+  }
+
+  .receipt-input {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 
   .evaluation-provenance dl > div,

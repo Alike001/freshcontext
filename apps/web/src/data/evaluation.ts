@@ -19,6 +19,43 @@ export interface EvaluationEvidence {
 export type EvaluationClassification =
   'true_positive' | 'true_negative' | 'false_positive' | 'false_negative';
 
+export interface PublicRepositoryProvenance {
+  readonly kind: 'public_repository';
+  readonly repository: string;
+  readonly url: string;
+  readonly beforeCommit: string;
+  readonly afterCommit: string;
+  readonly license: string;
+  readonly sourcePaths: readonly string[];
+}
+
+export interface EvaluationMcpRecall {
+  readonly status: 'ready';
+  readonly indexedCommit: string;
+  readonly returnedMemoryIds: readonly string[];
+  readonly withheldMemoryIds: readonly string[];
+  readonly abstained: boolean;
+  readonly abstentionReason: 'no_memory' | 'all_matching_memory_unsafe' | null;
+}
+
+export interface EvaluationMcpReceipt {
+  readonly caseId: string;
+  readonly client: '@modelcontextprotocol/sdk Client';
+  readonly transport: 'linked in-process MCP transport';
+  readonly tool: 'freshcontext_recall';
+  readonly registeredTools: readonly string[];
+  readonly input: {
+    readonly repositoryId: string;
+    readonly path: string;
+    readonly qualifiedName: string;
+    readonly beforeCommit: string;
+    readonly afterCommit: string;
+  };
+  readonly memoryId: string;
+  readonly beforeChange: EvaluationMcpRecall;
+  readonly afterChange: EvaluationMcpRecall;
+}
+
 export interface EvaluationLabel {
   readonly id: string;
   readonly claim: string;
@@ -40,6 +77,9 @@ export interface EvaluationCase {
   readonly caseId: string;
   readonly description: string;
   readonly changeSummary: string;
+  readonly provenance: PublicRepositoryProvenance | null;
+  readonly beforeCommit: string;
+  readonly afterCommit: string;
   readonly labelCount: number;
   readonly changedSymbolCount: number;
   readonly unresolvedCallCount: number;
@@ -63,6 +103,7 @@ export interface EvaluationResponse {
     readonly labelCount: number;
   };
   readonly cases: readonly EvaluationCase[];
+  readonly mcpReceipt: EvaluationMcpReceipt;
   readonly aggregate: {
     readonly graph: EvaluationMetrics;
     readonly directFileBaseline: EvaluationMetrics;
@@ -154,6 +195,7 @@ export function parseEvaluationResponse(value: unknown): EvaluationResponse {
       labelCount: integer(datasetRecord, 'labelCount'),
     },
     cases: array(artifact, 'cases').map(parseCase),
+    mcpReceipt: parseMcpReceipt(artifact['mcpReceipt']),
     aggregate: {
       graph: parseMetrics(aggregateRecord['graph']),
       directFileBaseline: parseMetrics(aggregateRecord['directFileBaseline']),
@@ -167,12 +209,72 @@ function parseCase(value: unknown): EvaluationCase {
     caseId: text(entry, 'caseId'),
     description: text(entry, 'description'),
     changeSummary: text(entry, 'changeSummary'),
+    provenance: parsePublicProvenance(entry['provenance']),
+    beforeCommit: text(entry, 'beforeCommit'),
+    afterCommit: text(entry, 'afterCommit'),
     labelCount: integer(entry, 'labelCount'),
     changedSymbolCount: integer(entry, 'changedSymbolCount'),
     unresolvedCallCount: integer(entry, 'unresolvedCallCount'),
     labels: array(entry, 'labels').map(parseLabel),
     graph: parseMetrics(entry['graph']),
     directFileBaseline: parseMetrics(entry['directFileBaseline']),
+  };
+}
+
+function parsePublicProvenance(value: unknown): PublicRepositoryProvenance | null {
+  if (value === null) return null;
+  const provenance = record(value, 'public repository provenance');
+  literal(provenance, 'kind', 'public_repository');
+  return {
+    kind: 'public_repository',
+    repository: text(provenance, 'repository'),
+    url: text(provenance, 'url'),
+    beforeCommit: text(provenance, 'beforeCommit'),
+    afterCommit: text(provenance, 'afterCommit'),
+    license: text(provenance, 'license'),
+    sourcePaths: stringArray(provenance['sourcePaths']),
+  };
+}
+
+function parseMcpReceipt(value: unknown): EvaluationMcpReceipt {
+  const receipt = record(value, 'MCP receipt');
+  literal(receipt, 'client', '@modelcontextprotocol/sdk Client');
+  literal(receipt, 'transport', 'linked in-process MCP transport');
+  literal(receipt, 'tool', 'freshcontext_recall');
+  const input = record(receipt['input'], 'MCP receipt input');
+  return {
+    caseId: text(receipt, 'caseId'),
+    client: '@modelcontextprotocol/sdk Client',
+    transport: 'linked in-process MCP transport',
+    tool: 'freshcontext_recall',
+    registeredTools: stringArray(receipt['registeredTools']),
+    input: {
+      repositoryId: text(input, 'repositoryId'),
+      path: text(input, 'path'),
+      qualifiedName: text(input, 'qualifiedName'),
+      beforeCommit: text(input, 'beforeCommit'),
+      afterCommit: text(input, 'afterCommit'),
+    },
+    memoryId: text(receipt, 'memoryId'),
+    beforeChange: parseMcpRecall(receipt['beforeChange']),
+    afterChange: parseMcpRecall(receipt['afterChange']),
+  };
+}
+
+function parseMcpRecall(value: unknown): EvaluationMcpRecall {
+  const recall = record(value, 'MCP recall');
+  literal(recall, 'status', 'ready');
+  const reason = recall['abstentionReason'];
+  if (reason !== null && reason !== 'no_memory' && reason !== 'all_matching_memory_unsafe') {
+    throw new Error('Invalid MCP abstention reason');
+  }
+  return {
+    status: 'ready',
+    indexedCommit: text(recall, 'indexedCommit'),
+    returnedMemoryIds: stringArray(recall['returnedMemoryIds']),
+    withheldMemoryIds: stringArray(recall['withheldMemoryIds']),
+    abstained: boolean(recall, 'abstained'),
+    abstentionReason: reason,
   };
 }
 

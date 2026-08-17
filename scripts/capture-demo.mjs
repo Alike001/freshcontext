@@ -66,6 +66,14 @@ try {
   await page.getByRole('heading', { name: 'Same changes, same labels' }).scrollIntoViewIfNeeded();
   await page.waitForTimeout(1_500);
   await page
+    .getByRole('heading', { name: 'A real fix from the official MCP TypeScript SDK.' })
+    .scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1_500);
+  await page
+    .getByRole('heading', { name: 'Same MCP recall. Safe before, withheld after.' })
+    .scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1_500);
+  await page
     .getByRole('heading', { name: 'The file baseline missed this 3-hop caller.' })
     .scrollIntoViewIfNeeded();
   await page.waitForTimeout(1_500);

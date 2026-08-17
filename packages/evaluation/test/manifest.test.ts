@@ -60,4 +60,32 @@ describe('evaluation manifest validation', () => {
       ),
     ).toThrow('Expected impact path must end at the memory evidence');
   });
+
+  it('accepts full public provenance and an affected MCP receipt label', () => {
+    const result = parseCaseManifest(
+      JSON.stringify({
+        ...validManifest,
+        provenance: {
+          kind: 'public_repository',
+          repository: 'example/project',
+          url: 'https://github.com/example/project',
+          beforeCommit: 'a'.repeat(40),
+          afterCommit: 'b'.repeat(40),
+          license: 'MIT',
+          sourcePaths: ['src/a.ts'],
+        },
+        mcpReceiptLabelId: 'affected',
+      }),
+    );
+    expect(result).toMatchObject({
+      provenance: { repository: 'example/project' },
+      mcpReceiptLabelId: 'affected',
+    });
+  });
+
+  it('rejects an MCP receipt label without public provenance', () => {
+    expect(() =>
+      parseCaseManifest(JSON.stringify({ ...validManifest, mcpReceiptLabelId: 'affected' })),
+    ).toThrow('MCP receipt requires public repository provenance');
+  });
 });

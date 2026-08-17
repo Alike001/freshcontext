@@ -28,10 +28,48 @@ export interface EvaluationLabelResult {
   readonly directFileBaseline: EvaluationPrediction;
 }
 
+export interface PublicRepositoryProvenance {
+  readonly kind: 'public_repository';
+  readonly repository: string;
+  readonly url: string;
+  readonly beforeCommit: string;
+  readonly afterCommit: string;
+  readonly license: string;
+  readonly sourcePaths: readonly string[];
+}
+
+export interface EvaluationMcpRecallResult {
+  readonly status: 'ready';
+  readonly indexedCommit: string;
+  readonly returnedMemoryIds: readonly string[];
+  readonly withheldMemoryIds: readonly string[];
+  readonly abstained: boolean;
+  readonly abstentionReason: 'no_memory' | 'all_matching_memory_unsafe' | null;
+}
+
+export interface EvaluationMcpReceipt {
+  readonly caseId: string;
+  readonly client: '@modelcontextprotocol/sdk Client';
+  readonly transport: 'linked in-process MCP transport';
+  readonly tool: 'freshcontext_recall';
+  readonly registeredTools: readonly string[];
+  readonly input: {
+    readonly repositoryId: string;
+    readonly path: string;
+    readonly qualifiedName: string;
+    readonly beforeCommit: string;
+    readonly afterCommit: string;
+  };
+  readonly memoryId: string;
+  readonly beforeChange: EvaluationMcpRecallResult;
+  readonly afterChange: EvaluationMcpRecallResult;
+}
+
 export interface EvaluationCaseResult {
   readonly caseId: string;
   readonly description: string;
   readonly changeSummary: string;
+  readonly provenance: PublicRepositoryProvenance | null;
   readonly beforeCommit: string;
   readonly afterCommit: string;
   readonly labelCount: number;
@@ -56,6 +94,7 @@ export interface EvaluationArtifact {
     readonly labelCount: number;
   };
   readonly cases: readonly EvaluationCaseResult[];
+  readonly mcpReceipt: EvaluationMcpReceipt;
   readonly aggregate: {
     readonly graph: BinaryMetrics;
     readonly directFileBaseline: BinaryMetrics;

@@ -1,0 +1,108 @@
+{
+  "caseId": "mcp-request-id-zero",
+  "description": "The official MCP TypeScript SDK preserves related notifications for legal JSON-RPC id zero.",
+  "changeSummary": "The debounce guard changed from a truthiness check to an explicit undefined check, affecting notification callers in an unchanged server file.",
+  "provenance": {
+    "kind": "public_repository",
+    "repository": "modelcontextprotocol/typescript-sdk",
+    "url": "https://github.com/modelcontextprotocol/typescript-sdk",
+    "beforeCommit": "4e11aad37a963d51c6e245bcdf86457f32882709",
+    "afterCommit": "26bc4a28142faeac0b54eef17ef6fee3378ca4de",
+    "license": "MIT and Apache-2.0 transition notice",
+    "sourcePaths": [
+      "packages/core-internal/src/shared/protocol.ts",
+      "packages/server/src/server/server.ts"
+    ]
+  },
+  "mcpReceiptLabelId": "tool-list-changed",
+  "labels": [
+    {
+      "id": "debounce-guard",
+      "claim": "The notification debounce guard treats a related request id of zero as present.",
+      "path": "packages/core-internal/src/shared/protocol.ts",
+      "qualifiedName": "Protocol._notificationViaCodec",
+      "expected": true,
+      "expectedPath": [
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol._notificationViaCodec"
+        }
+      ]
+    },
+    {
+      "id": "notification",
+      "claim": "Protocol.notification delegates to the changed codec-aware debounce guard.",
+      "path": "packages/core-internal/src/shared/protocol.ts",
+      "qualifiedName": "Protocol.notification",
+      "expected": true,
+      "expectedPath": [
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol._notificationViaCodec"
+        },
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol.notification"
+        }
+      ]
+    },
+    {
+      "id": "tool-list-changed",
+      "claim": "Server tool-list notifications depend on the corrected related-request debounce behavior.",
+      "path": "packages/server/src/server/server.ts",
+      "qualifiedName": "Server.sendToolListChanged",
+      "expected": true,
+      "expectedPath": [
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol._notificationViaCodec"
+        },
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol.notification"
+        },
+        {
+          "path": "packages/server/src/server/server.ts",
+          "qualifiedName": "Server.sendToolListChanged"
+        }
+      ]
+    },
+    {
+      "id": "resource-updated",
+      "claim": "Server resource-update notifications depend on the corrected related-request debounce behavior.",
+      "path": "packages/server/src/server/server.ts",
+      "qualifiedName": "Server.sendResourceUpdated",
+      "expected": true,
+      "expectedPath": [
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol._notificationViaCodec"
+        },
+        {
+          "path": "packages/core-internal/src/shared/protocol.ts",
+          "qualifiedName": "Protocol.notification"
+        },
+        {
+          "path": "packages/server/src/server/server.ts",
+          "qualifiedName": "Server.sendResourceUpdated"
+        }
+      ]
+    },
+    {
+      "id": "connect-unrelated",
+      "claim": "Protocol connection setup is unrelated to the notification debounce fix.",
+      "path": "packages/core-internal/src/shared/protocol.ts",
+      "qualifiedName": "Protocol.connect",
+      "expected": false,
+      "expectedPath": null
+    },
+    {
+      "id": "capabilities-unrelated",
+      "claim": "Reading client capabilities is unrelated to the notification debounce fix.",
+      "path": "packages/server/src/server/server.ts",
+      "qualifiedName": "Server.getClientCapabilities",
+      "expected": false,
+      "expectedPath": null
+    }
+  ]
+}

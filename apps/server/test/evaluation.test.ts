@@ -14,20 +14,28 @@ describe('verified evaluation artifact', () => {
     expect(result).toMatchObject({
       status: 'ready',
       source: 'verified_reference',
-      evaluationId: '2fd14725009b9b93',
-      dataset: { caseCount: 2, labelCount: 10 },
+      evaluationId: '83fa685433442945',
+      dataset: { caseCount: 3, labelCount: 16 },
       aggregate: {
-        graph: { truePositives: 6, falsePositives: 0, falseNegatives: 1, precision: 1 },
+        graph: { truePositives: 10, falsePositives: 0, falseNegatives: 1, precision: 1 },
         directFileBaseline: {
-          truePositives: 3,
-          falsePositives: 2,
-          falseNegatives: 4,
-          precision: 0.6,
+          truePositives: 5,
+          falsePositives: 3,
+          falseNegatives: 6,
+          precision: 0.625,
+        },
+      },
+      mcpReceipt: {
+        caseId: 'mcp-request-id-zero',
+        beforeChange: { abstained: false },
+        afterChange: {
+          abstained: true,
+          abstentionReason: 'all_matching_memory_unsafe',
         },
       },
     });
-    expect(result.aggregate.graph.recall).toBeCloseTo(6 / 7);
-    expect(result.aggregate.directFileBaseline.recall).toBeCloseTo(3 / 7);
+    expect(result.aggregate.graph.recall).toBeCloseTo(10 / 11);
+    expect(result.aggregate.directFileBaseline.recall).toBeCloseTo(5 / 11);
     expect(result.aggregate.graph.falseNegativeIds).toEqual(['policy-depth:beyond-boundary']);
   });
 
@@ -50,5 +58,14 @@ describe('verified evaluation artifact', () => {
     graph['classification'] = 'true_negative';
 
     expect(() => parseEvaluationArtifact(value)).toThrow('has an invalid graph classification');
+  });
+
+  it('rejects a receipt that hides the unsafe memory after the change', async () => {
+    const value = JSON.parse(await readFile(referencePath, 'utf8')) as Record<string, unknown>;
+    const receipt = value['mcpReceipt'] as Record<string, unknown>;
+    const after = receipt['afterChange'] as Record<string, unknown>;
+    after['withheldMemoryIds'] = [];
+
+    expect(() => parseEvaluationArtifact(value)).toThrow('does not prove recall then abstention');
   });
 });
