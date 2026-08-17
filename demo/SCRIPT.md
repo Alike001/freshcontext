@@ -1,85 +1,109 @@
 # Three-minute demo script
 
 Target length: 2 minutes 45 seconds. The final recording must stay under the official three-minute
-limit.
+limit. Every beat below names the published criterion it proves.
 
-## 0:00 to 0:18, the problem
+## 0:00 to 0:16, recognizable problem
 
-Show Overview.
+Published criterion: Originality.
 
-Narration:
-
-> Coding agents remember useful facts about a repository, but those facts become dangerous when the
-> code changes. FreshContext withholds a stale claim and proves exactly which changed function and
-> call path invalidated it.
-
-This establishes the clear use case and originality.
-
-## 0:18 to 0:35, one-command product
-
-Keep Overview visible and point to the startup command and connected status.
+Show Overview. Keep the stale-memory statement and proof dossier visible.
 
 Narration:
 
-> One Docker command starts the product and pinned HydraDB OSS. It also creates and indexes this
-> real two-commit TypeScript checkout example, so a judge can use the full product without an
-> account, API key, or setup form.
+> Coding agents keep useful facts about a repository across sessions. When the code changes, those
+> facts can become wrong while still sounding confident. FreshContext stops stale code memory from
+> reaching the agent and shows the exact path that made it unsafe.
 
-This proves product completeness and usability.
+Visible proof: the interface identifies one concrete stale claim and its review-needed status. Do
+not spend this beat describing the general agent-memory market.
 
-## 0:35 to 1:25, the graph-native proof
+## 0:16 to 0:33, runnable product
 
-Open Proof Console. Select “Checkout totals add a flat $2 service fee through calculateTotal.” Trace
-the orange path from `fee`, through `calculateTotal`, to `Checkout.total`, then show the Git diff.
+Published criterion: Product completeness and usability.
 
-Narration:
-
-> This claim cites `Checkout.total`, but the changed code is two calls away in `fee`. FreshContext
-> indexes stable symbols and call edges in HydraDB, compares the two commits, then runs a bounded
-> reverse traversal. The persisted proof is `fee`, `calculateTotal`, `Checkout.total`, and this
-> memory. A same-file matcher can't recover that cross-file dependency. Because the proof is unsafe,
-> recall withholds the claim instead of giving it to an agent.
-
-This proves technical execution and meaningful graph-native HydraDB use.
-
-## 1:25 to 1:55, changing truth safely
-
-Use the suggested replacement and select Supersede claim. Show the replacement result and the
-chronology.
+Keep Overview visible. Point to the one-command startup instruction and connected status.
 
 Narration:
 
-> Review creates a new evidence-bound version. It never edits or deletes the old claim. The original
-> becomes superseded, the replacement becomes current, and HydraDB keeps the chronology and
-> `SUPERSEDES` relationship. If this operation stops halfway, neither version enters recall until a
-> safe retry completes it.
+> One Docker command starts FreshContext and pinned HydraDB OSS. It creates and indexes a real
+> two-commit TypeScript checkout, with no account, API key, or setup form, so this complete path is
+> available immediately.
 
-This proves a complete, failure-aware workflow.
+Visible proof: show the exact command and live connected status. Do not wait for containers to boot
+inside the final video.
 
-## 1:55 to 2:32, result quality and agent receipt
+## 0:33 to 1:23, graph-native mechanism
 
-Open Evaluation. Show the score comparison, attributed public MCP SDK trace, MCP receipt, and the
-visible four-hop false negative.
+Published criteria: Technical execution and use of HydraDB and graph-native approaches.
 
-Narration:
-
-> The checked evaluation reruns 16 labels against the pinned HydraDB engine. Graph traversal reaches
-> 100 percent precision and 90.9 percent recall, compared with 62.5 percent precision and 45.5
-> percent recall for direct-file matching. This trace uses exact source from a real MCP TypeScript
-> SDK fix. The official MCP client receives the memory before the commit, then FreshContext returns
-> no stale context and names the withheld memory after sync. The four-hop miss stays visible.
-
-This proves quality of results without hiding the boundary.
-
-## 2:32 to 2:45, close with verifiability
-
-Open Setup and briefly show HydraDB connected, example data, selected commit, and ingestion counts.
+Open Proof Console. Select “Checkout totals add a flat $2 service fee through calculateTotal.” Show
+the changed `fee` diff, then trace the orange path through `calculateTotal` to `Checkout.total` and
+the attached memory.
 
 Narration:
 
-> Setup confirms a real authenticated HydraDB write and read, the selected Git commit, and the
-> indexed source counts. Every screen you saw is backed by the local graph or reproducible artifact.
-> FreshContext gives coding agents memory that knows when the code has moved on.
+> This memory cites `Checkout.total`, but the changed code is two calls away in `fee`. FreshContext
+> indexes compiler-resolved symbols and `CALLS` relationships in HydraDB, compares the two Git
+> commits, then traverses callers in reverse. The graph returns this persisted proof path: `fee`,
+> `calculateTotal`, `Checkout.total`, and the memory. Because that evidence is unsafe, recall
+> withholds the claim before an agent can use it.
+
+Visible proof: keep the Git diff, graph path, memory id, and withheld status together on screen. The
+cross-file path is the central HydraDB moment.
+
+## 1:23 to 1:52, complete correction workflow
+
+Published criteria: Technical execution and product completeness and usability.
+
+Use the suggested replacement and select Supersede claim. Show the new current version beside the
+superseded original and chronology.
+
+Narration:
+
+> A developer can now replace the obsolete claim. FreshContext creates a new evidence-bound version,
+> links it through `SUPERSEDES`, preserves the original, and activates only the reviewed version.
+> The chronology remains inspectable, and an interrupted update keeps both versions out of recall
+> until a safe retry finishes.
+
+Visible proof: show both immutable versions and their different states. Avoid claiming failure
+recovery unless the chronology and status are visible.
+
+## 1:52 to 2:31, measured result and agent behavior
+
+Published criterion: Quality of results. Supporting evidence for originality.
+
+Open Evaluation. Show the confusion matrices, the attributed public MCP TypeScript SDK trace, the
+official MCP client receipt, and the disclosed four-hop false negative.
+
+Narration:
+
+> The checked evaluation reruns three Git histories and 16 labels against pinned HydraDB. Graph
+> traversal reaches 100 percent precision and 90.9 percent recall, compared with 62.5 percent
+> precision and 45.5 percent recall for direct-file matching. This case preserves exact source from
+> a real MCP TypeScript SDK fix. The official MCP client receives current memory before the change,
+> then receives no stale memory and a machine-readable withholding reason after sync. The visible
+> four-hop miss is outside V1's three-hop boundary.
+
+Visible proof: show the artifact id, source commits, returned memory, withheld memory, and false
+negative. Describe this as a bounded reproducible evaluation, not a broad industry benchmark.
+
+## 2:31 to 2:45, HydraDB and provenance close
+
+Published criteria: Use of HydraDB and graph-native approaches, plus product completeness and
+usability.
+
+Open Setup. Show HydraDB connected, the selected commit, real ingestion counts, and the reproducible
+evaluation command.
+
+Narration:
+
+> Setup verifies a real authenticated HydraDB write and read, the selected Git commit, and the
+> indexed source counts. Every result shown comes from the local graph or a reproducible artifact.
+> FreshContext gives coding agents continuity that knows when the code has moved on.
+
+Visible proof: finish on the connected database and exact commit rather than returning to a
+marketing screen.
 
 ## Recording fallback
 
