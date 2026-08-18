@@ -25,8 +25,9 @@ try {
   assert(
     setupResponse.status === 200 &&
       setup.repository?.state === 'indexed' &&
-      setup.repository?.source === 'example',
-    'Expected the real indexed example setup',
+      setup.repository?.source === 'example' &&
+      setup.startupCommand === 'docker compose up --wait',
+    'Expected the real indexed example setup and the matching judge command',
   );
   assert(
     consoleResponse.status === 200 &&
