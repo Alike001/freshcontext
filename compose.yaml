@@ -85,10 +85,7 @@ services:
 
   mcp:
     profiles: ['tools']
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: mcp-runtime
+    image: ghcr.io/alike001/freshcontext-mcp@sha256:91b49516ccb863e87f3239b567e39fb40aebaf8e9fc4ceac68462fabe9ce33fa
     depends_on:
       hydra:
         condition: service_started

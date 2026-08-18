@@ -105,6 +105,7 @@ pnpm build
 pnpm test:integration
 pnpm test:configured
 pnpm test:fast-start
+pnpm test:mcp-image
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
@@ -121,6 +122,11 @@ The fast-start test pulls the pinned images before timing, creates empty product
 volumes, starts the exact default Compose stack, verifies the real two-hop proof, and fails if the
 healthy result exceeds 30 seconds. Registry download time is reported separately because it depends
 on the machine's network.
+
+The MCP image test starts the default pinned stack, launches the documented Compose stdio command,
+connects through the official MCP client, lists the three product tools, and verifies the indexed
+example status. The normal MCP path uses a pinned image. `compose.build.yaml` remains the explicit
+source-build override for both product runtimes.
 
 The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, the
 live impact dossier, immutable review, and unavailable-service paths:

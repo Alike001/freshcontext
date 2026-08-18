@@ -27,6 +27,7 @@
     "test:e2e": "playwright test",
     "test:fast-start": "node scripts/test-fast-start.mjs",
     "test:integration": "node scripts/test-integration.mjs",
+    "test:mcp-image": "node scripts/test-mcp-image.mjs",
     "typecheck": "pnpm --recursive typecheck"
   },
   "devDependencies": {
