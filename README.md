@@ -102,10 +102,12 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm check
 pnpm build
+pnpm test:coverage
 pnpm test:integration
 pnpm test:configured
 pnpm test:fast-start
 pnpm test:mcp-image
+pnpm security:audit
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
@@ -127,6 +129,10 @@ The MCP image test starts the default pinned stack, launches the documented Comp
 connects through the official MCP client, lists the three product tools, and verifies the indexed
 example status. The normal MCP path uses a pinned image. `compose.build.yaml` remains the explicit
 source-build override for both product runtimes.
+
+The public CI quality job adds V8 coverage output and a production dependency audit. Its separate
+production-contract job builds from source against the pinned HydraDB engine, then runs the complete
+desktop and mobile Playwright suite against the default production stack.
 
 The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, the
 live impact dossier, immutable review, and unavailable-service paths:
