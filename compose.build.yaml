@@ -5,3 +5,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
+
+  mcp:
+    image: freshcontext-mcp-local:build
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mcp-runtime

@@ -1,4 +1,4 @@
-name: Publish runtime image
+name: Publish runtime images
 
 on:
   push:
@@ -15,8 +15,17 @@ concurrency:
 
 jobs:
   publish:
+    name: publish (${{ matrix.target }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: runtime
+            image: ghcr.io/alike001/freshcontext
+          - target: mcp-runtime
+            image: ghcr.io/alike001/freshcontext-mcp
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +43,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/alike001/freshcontext
+          images: ${{ matrix.image }}
           tags: |
             type=raw,value=${{ github.sha }}
             type=raw,value=main
@@ -45,15 +54,15 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          target: runtime
+          target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
           provenance: mode=max
           sbom: true
 
       - name: Record immutable image reference
-        run: echo "ghcr.io/alike001/freshcontext@${{ steps.publish.outputs.digest }}"
+        run: echo "${{ matrix.image }}@${{ steps.publish.outputs.digest }}"
