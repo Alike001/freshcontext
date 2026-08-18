@@ -1,0 +1,7 @@
+services:
+  freshcontext:
+    image: freshcontext-local:build
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime

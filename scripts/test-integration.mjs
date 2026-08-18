@@ -140,7 +140,16 @@ async function waitForUnavailable(portNumber) {
 async function compose(arguments_, options = {}) {
   const exitCode = await run(
     'docker',
-    ['compose', '--project-name', projectName, ...arguments_],
+    [
+      'compose',
+      '--project-name',
+      projectName,
+      '-f',
+      'compose.yaml',
+      '-f',
+      'compose.build.yaml',
+      ...arguments_,
+    ],
     environment,
   );
   if (exitCode !== 0 && !options.tolerateFailure) {

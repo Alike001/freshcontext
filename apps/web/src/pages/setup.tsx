@@ -19,9 +19,7 @@ export function SetupPage() {
         <h2 id="startup-heading">Start the stack</h2>
         <CommandBlock
           command={
-            resource.state === 'ready'
-              ? resource.data.startupCommand
-              : 'docker compose up --build --wait'
+            resource.state === 'ready' ? resource.data.startupCommand : 'docker compose up --wait'
           }
         />
       </section>

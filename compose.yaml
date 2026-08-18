@@ -42,9 +42,7 @@ services:
       - hydra-data:/data
 
   freshcontext:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/alike001/freshcontext@sha256:dd1695714912b30e0e0efc1fae358719e7768ff6cafe4b87deead0e597ea1299
     depends_on:
       example-init:
         condition: service_completed_successfully

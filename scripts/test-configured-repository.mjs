@@ -135,6 +135,8 @@ async function compose(arguments_, options = {}) {
       '-f',
       'compose.yaml',
       '-f',
+      'compose.build.yaml',
+      '-f',
       'compose.repository.yaml',
       ...arguments_,
     ],

@@ -261,7 +261,7 @@ function setupBody(state: 'not_indexed' | 'indexing' | 'indexed' | 'invalid_repo
     status: 'ready',
     hydra: 'connected',
     startupCommand:
-      'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait',
+      'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --wait',
     repository: {
       state,
       source: 'configured',

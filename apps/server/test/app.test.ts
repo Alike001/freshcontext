@@ -95,7 +95,7 @@ describe('FreshContext HTTP service', () => {
     expect(response.json()).toEqual({
       status: 'ready',
       hydra: 'connected',
-      startupCommand: 'docker compose up --build --wait',
+      startupCommand: 'docker compose up --wait',
       repository: {
         state: 'not_configured',
         source: null,
@@ -201,7 +201,7 @@ describe('FreshContext HTTP service', () => {
     expect(response.json()).toMatchObject({
       hydra: 'connected',
       startupCommand:
-        'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait',
+        'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --wait',
       repository: {
         state: 'indexed',
         id: 'checkout',

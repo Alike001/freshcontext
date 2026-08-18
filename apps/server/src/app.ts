@@ -729,8 +729,8 @@ async function readSetup(options: AppOptions) {
     hydra,
     startupCommand:
       options.setup?.source === 'configured'
-        ? 'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --build --wait'
-        : 'docker compose up --build --wait',
+        ? 'FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path docker compose -f compose.yaml -f compose.repository.yaml up --wait'
+        : 'docker compose up --wait',
     repository,
   };
 }

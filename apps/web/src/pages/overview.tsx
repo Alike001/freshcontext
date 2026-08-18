@@ -15,7 +15,7 @@ export function OverviewPage() {
   const { resource } = useSetup();
   const [proof, setProof] = useState<ProofResource>({ state: 'loading', data: null });
   const startupCommand =
-    resource.state === 'ready' ? resource.data.startupCommand : 'docker compose up --build --wait';
+    resource.state === 'ready' ? resource.data.startupCommand : 'docker compose up --wait';
   const dossier = proof.state === 'ready' ? proof.data.selected : null;
 
   useEffect(() => {

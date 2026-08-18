@@ -5,7 +5,7 @@ import { parseSetupResponse } from '../src/data/setup.js';
 const setupResponse = {
   status: 'ready',
   hydra: 'connected',
-  startupCommand: 'docker compose up --build --wait',
+  startupCommand: 'docker compose up --wait',
   repository: {
     state: 'indexed',
     source: 'example',

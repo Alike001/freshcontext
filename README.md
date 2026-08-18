@@ -13,13 +13,21 @@ Hack Hydra 2026, Track 2B: Repos, dependencies, and code as graphs.
 Prerequisite: Docker Engine with Docker Compose v2.
 
 ```bash
-docker compose up --build --wait
+docker compose up --wait
 ```
 
-Open <http://localhost:3000>. The command builds the product, starts the pinned HydraDB OSS engine,
-creates a real two-commit TypeScript repository, indexes it, stores evidence-bound memories, and
-synchronizes the code change. No account, API key, or repository configuration is required. A cold
-Docker cache can take a few minutes, and `--wait` returns only after the product reports healthy.
+Open <http://localhost:3000>. The command starts pinned FreshContext and HydraDB OSS images, creates
+a real two-commit TypeScript repository, indexes it, stores evidence-bound memories, and
+synchronizes the code change. No account, API key, environment file, or repository configuration is
+required. `--wait` returns only after the product reports healthy. A machine that has never pulled
+the two images still depends on registry bandwidth. With the pinned images already present, the
+verified empty-volume startup stays inside the 30-second judge path.
+
+To reproduce the FreshContext image from source instead:
+
+```bash
+docker compose -f compose.yaml -f compose.build.yaml up --build --wait
+```
 
 The shortest judge path is:
 
@@ -43,7 +51,7 @@ files. Start it with the repository mounted read-only:
 ```bash
 FRESHCONTEXT_HOST_REPOSITORY_PATH=/absolute/path/to/repository \
 FRESHCONTEXT_REPOSITORY_ID=my-repository \
-docker compose -f compose.yaml -f compose.repository.yaml up --build --wait
+docker compose -f compose.yaml -f compose.repository.yaml up --wait
 ```
 
 Open <http://localhost:3000/setup> and select `Index repository`. Setup shows the active indexing
@@ -96,6 +104,7 @@ pnpm check
 pnpm build
 pnpm test:integration
 pnpm test:configured
+pnpm test:fast-start
 ```
 
 The integration test creates an isolated Compose project, proves the real HydraDB round trip, runs
@@ -107,6 +116,11 @@ closed, and removes only that isolated project's containers and volume.
 The configured-repository test mounts a separate real Git repository read-only, indexes it through
 the product API, synchronizes a second committed revision, and verifies that an uncommitted edit is
 rejected and remains visible in Setup.
+
+The fast-start test pulls the pinned images before timing, creates empty product and HydraDB data
+volumes, starts the exact default Compose stack, verifies the real two-hop proof, and fails if the
+healthy result exceeds 30 seconds. Registry download time is reported separately because it depends
+on the machine's network.
 
 The browser suite checks desktop and mobile navigation, keyboard access, responsive overflow, the
 live impact dossier, immutable review, and unavailable-service paths:
@@ -196,7 +210,7 @@ reviewed and verified by the participant.
 
 HydraDB OSS, direct libraries, development tools, and bundled fonts are credited in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Exact dependency versions are pinned in
-`pnpm-lock.yaml` and the container image digests are pinned in `Dockerfile` and `compose.yaml`.
+`pnpm-lock.yaml` and the runtime image digests are pinned in `compose.yaml`.
 
 ## License
 
