@@ -63,8 +63,8 @@ Narration:
 
 > A developer can now replace the obsolete claim. FreshContext creates a new evidence-bound version,
 > links it through `SUPERSEDES`, preserves the original, and activates only the reviewed version.
-> The chronology remains inspectable, and an interrupted update keeps both versions out of recall
-> until a safe retry finishes.
+> The complete chronology remains inspectable while agent recall returns only the safe current
+> claim.
 
 Visible proof: show both immutable versions and their different states. Avoid claiming failure
 recovery unless the chronology and status are visible.
