@@ -36,17 +36,21 @@ try {
   await page.getByRole('button', { name: /Checkout totals add a flat \$2 service fee/u }).click();
   await page.getByRole('heading', { name: 'Why this claim was withheld' }).waitFor();
   await page.getByLabel('Code change').waitFor();
+  await page.getByText('2 OPEN', { exact: true }).waitFor();
+  const reviewButton = page.getByRole('button', { name: 'Supersede claim' });
+  if (!(await reviewButton.isVisible())) {
+    throw new Error(
+      'Demo capture requires the fresh three-claim example state. Start with a fresh example volume before capturing.',
+    );
+  }
   await page.waitForTimeout(1_200);
   await prepareStaticFrame(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, 'proof-console.png'),
     fullPage: true,
   });
-  const reviewButton = page.getByRole('button', { name: 'Supersede claim' });
-  if (await reviewButton.isVisible()) {
-    await reviewButton.click();
-    await page.getByText('Supersession verified', { exact: true }).waitFor();
-  }
+  await reviewButton.click();
+  await page.getByText('Supersession verified', { exact: true }).waitFor();
   await page.waitForTimeout(1_000);
   await prepareStaticFrame(page);
   await page.screenshot({
